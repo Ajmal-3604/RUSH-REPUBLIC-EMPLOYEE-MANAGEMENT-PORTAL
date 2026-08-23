@@ -1,0 +1,123 @@
+.rr-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: rgba(10, 10, 10, 0.42);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 20px;
+  overflow-y: auto;
+  animation: rr-backdrop-in 180ms ease both;
+}
+
+@keyframes rr-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.rr-modal {
+  width: 100%;
+  background: var(--rr-white);
+  border: 1px solid var(--rr-black);
+  animation: rr-modal-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes rr-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rr-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px 18px;
+  border-bottom: 1px solid var(--rr-line);
+}
+
+.rr-modal__title {
+  font-family: var(--rr-font-display);
+  font-stretch: 78%;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.rr-modal__subtitle {
+  margin: 6px 0 0;
+  font-family: var(--rr-font-body);
+  font-size: 12px;
+  color: var(--rr-grey);
+}
+
+.rr-modal__message {
+  font-family: var(--rr-font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.rr-modal__close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--rr-line);
+  color: var(--rr-black);
+  cursor: pointer;
+  transition: background var(--rr-transition), color var(--rr-transition),
+    border-color var(--rr-transition);
+}
+
+.rr-modal__close:hover {
+  background: var(--rr-black);
+  border-color: var(--rr-black);
+  color: var(--rr-white);
+}
+
+.rr-modal__body {
+  padding: 24px 26px;
+}
+
+.rr-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 26px;
+  border-top: 1px solid var(--rr-line);
+  background: var(--rr-off-white);
+}
+
+@media (max-width: 560px) {
+  .rr-modal-backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+  .rr-modal {
+    min-height: 100%;
+    border: none;
+  }
+  .rr-modal__footer {
+    flex-direction: column-reverse;
+  }
+  .rr-modal__footer .rr-btn {
+    width: 100%;
+  }
+}

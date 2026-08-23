@@ -1,0 +1,403 @@
+/*
+ * The wizard is its own standalone full-page view in the source -- it does
+ * NOT sit inside the persistent RUSH REPUBLIC nav bar the way the dashboard
+ * and directory pages do. `.rr-wiz-page` stands in for that outer shell.
+ */
+.rr-wiz-page {
+  min-height: 100vh;
+  background: #f7f7f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.rr-wiz {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.rr-wiz__topbar {
+  background: #fff;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, .08);
+  flex-wrap: wrap;
+}
+
+.rr-wiz__back {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: rgba(0, 0, 0, .55);
+  padding: 0;
+}
+
+.rr-wiz__title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 16px;
+}
+
+.rr-wiz__spacer {
+  flex: 1;
+}
+
+.rr-wiz__savetext {
+  font-size: 12px;
+  color: rgba(0, 0, 0, .45);
+  white-space: nowrap;
+}
+
+.rr-wiz__btn {
+  border: 1px solid rgba(0, 0, 0, .2);
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rr-wiz__btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.rr-wiz__btn--dark {
+  background: #0e0e0e;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+}
+
+.rr-wiz__body {
+  display: flex;
+  flex: 1;
+}
+
+.rr-wiz__nav {
+  width: 210px;
+  background: #f7f7f5;
+  padding: 24px 16px;
+  border-right: 1px solid rgba(0, 0, 0, .08);
+  flex: none;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+.rr-wiz__ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.rr-wiz__ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rr-wiz__ring-inner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f7f7f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rr-wiz__ring-label {
+  font-size: 11px;
+  color: rgba(0, 0, 0, .5);
+}
+
+.rr-wiz__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rr-wiz__step {
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  color: rgba(0, 0, 0, .75);
+}
+
+.rr-wiz__step--active {
+  background: #0e0e0e;
+  color: #fff;
+  font-weight: 700;
+}
+
+.rr-wiz__step-check {
+  color: #1fac71;
+}
+
+.rr-wiz__step--active .rr-wiz__step-check {
+  color: #6ee6ab;
+}
+
+.rr-wiz__pills {
+  display: none;
+}
+
+.rr-wiz__content {
+  flex: 1;
+  padding: 28px 32px;
+  background: #fff;
+  min-width: 0;
+}
+
+.rr-wiz__glance {
+  width: 260px;
+  background: #f7f7f5;
+  padding: 24px;
+  border-left: 1px solid rgba(0, 0, 0, .08);
+  flex: none;
+}
+
+.rr-wiz__glance-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: rgba(0, 0, 0, .5);
+  margin-bottom: 14px;
+}
+
+.rr-wiz__glance-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.rr-wiz__glance-row span {
+  color: rgba(0, 0, 0, .5);
+}
+
+.rr-wiz__glance-row b {
+  font-weight: 600;
+}
+
+.rr-wiz__glance-warning {
+  margin-top: 6px;
+  background: #fde8cc;
+  color: #8a5a12;
+  border-radius: 5px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .rr-wiz__glance {
+    display: none;
+  }
+}
+
+.rr-wiz-step-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 22px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 860px) {
+  .rr-wiz__nav {
+    display: none;
+  }
+  .rr-wiz__pills {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    background: #f7f7f5;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, .08);
+  }
+  .rr-wiz__pill {
+    white-space: nowrap;
+    border: none;
+    border-radius: 16px;
+    padding: 8px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #fff;
+    color: #0e0e0e;
+    border: 1px solid rgba(0, 0, 0, .15);
+  }
+  .rr-wiz__pill--active {
+    background: #0e0e0e;
+    color: #fff;
+    border-color: #0e0e0e;
+  }
+  .rr-wiz__content {
+    padding: 20px;
+  }
+}
+
+/* Printable Version: only the step content itself should print -- not the
+   back/save/submit topbar, the step nav (sidebar or, at print-page width,
+   the horizontally-scrolling pills bar), or the "at a glance" side panel. */
+@media print {
+  /* Consistent, compact margins on every page regardless of the browser's
+     own default (which varies and tends to be generous) -- only takes
+     effect if the user leaves the print dialog's margin setting on
+     "Default", but that's the common case. */
+  @page {
+    size: auto;
+    margin: 12mm 14mm;
+  }
+
+  .rr-wiz__topbar,
+  .rr-wiz__nav,
+  .rr-wiz__pills,
+  .rr-wiz__glance {
+    display: none !important;
+  }
+
+  /* Application controls that must never appear in a downloaded/printed
+     document: per-section "Edit" links, approval workflow action buttons
+     (Approve / Hold / Return / Mark Complete), and anything explicitly
+     flagged with .rr-print-hide (Back to Edit / Save Draft / Preview
+     Printable Version / Submit for Internal Approval, delete-plan,
+     the "before you submit" warnings banner). */
+  .rr-review-edit,
+  .rr-approval-actions,
+  .rr-print-hide {
+    display: none !important;
+  }
+
+  .rr-wiz__body {
+    display: block;
+  }
+
+  .rr-wiz__content {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    overflow: visible !important;
+  }
+
+  .rr-wiz-page,
+  .rr-wiz {
+    min-height: 0;
+  }
+
+  /* The page's own scrollbar (normal on screen, since the wizard is taller
+     than the viewport) must not get captured into the printed output --
+     force the document to lay out as flowing pages, not a scrolled panel. */
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  /* Belt-and-braces for Print Details: an uploaded image can be any native
+     size, so cap it to the page width and let it keep its own aspect ratio
+     -- never stretched, never wide enough to trigger print overflow. */
+  .rr-wiz__content img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Every reel/photo/model/location/prop card avoids splitting across a
+     page when it reasonably can -- but this is a hint, not a hard rule, so
+     a card taller than one page still flows onto the next instead of
+     forcing a giant blank gap. */
+  .rr-review-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* A label/value grid (e.g. Address / Map URL / Permit status) must never
+     be split so its label lands on one page and its value on the next. */
+  .rr-review-fields,
+  .rr-wizgrid-2 {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Keep a section heading glued to the content that follows it -- without
+     this a heading can be stranded alone at the bottom of a page while
+     everything under it flows to the next, leaving a large empty gap. */
+  .rr-review-section__title,
+  .rr-review-section__head,
+  .rr-review-item__title,
+  .rr-note-block__label {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Tighter, print-only spacing -- the on-screen padding/margins (roomy by
+     design for a click target) waste space on paper. Screen styling is
+     untouched; this only applies inside @media print. */
+  .rr-review-section {
+    padding: 10px 14px;
+    margin-bottom: 8px;
+  }
+
+  .rr-review-item {
+    padding: 8px 0;
+  }
+
+  .rr-note-block {
+    margin-top: 6px;
+    padding: 8px;
+  }
+
+  /* Rush Republic branding: centered, compact, top of every printed page
+     the content starts on. */
+  .rr-print-brand {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 10px;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .rr-print-brand img {
+    height: 40px;
+    width: auto;
+  }
+
+  .rr-print-brand__name {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+}

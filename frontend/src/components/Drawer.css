@@ -1,0 +1,157 @@
+.rr-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 200;
+}
+
+.rr-drawer {
+  background: #fff;
+  width: 420px;
+  max-width: 92vw;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.rr-drawer__title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.rr-drawer label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .6);
+  display: block;
+  margin: 14px 0 6px;
+}
+
+.rr-drawer label:first-of-type {
+  margin-top: 0;
+}
+
+.rr-drawer input,
+.rr-drawer select,
+.rr-drawer textarea {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, .15);
+  border-radius: 5px;
+  padding: 9px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.rr-drawer textarea {
+  resize: vertical;
+}
+
+.rr-drawer__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.rr-drawer__required {
+  color: #ff615f;
+}
+
+.rr-drawer__error {
+  font-size: 12px;
+  color: #ff615f;
+  margin-top: 4px;
+}
+
+.rr-drawer__chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.rr-drawer__chip {
+  border: 1px solid rgba(0, 0, 0, .15);
+  border-radius: 14px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+  color: #0e0e0e;
+}
+
+.rr-drawer__chip--active {
+  background: #0e0e0e;
+  color: #fff;
+  border-color: #0e0e0e;
+}
+
+.rr-drawer__photo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 14px;
+}
+
+.rr-drawer__photo-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #eee;
+  flex: none;
+}
+
+.rr-drawer__photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rr-drawer__upload {
+  border: 1px solid rgba(0, 0, 0, .2);
+  border-radius: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+}
+
+.rr-drawer__upload input {
+  display: none;
+}
+
+.rr-drawer__status-row {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 20px;
+}
+
+.rr-drawer__status-btn {
+  border-radius: 5px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, .2);
+  background: #fff;
+  color: #0e0e0e;
+}
+
+.rr-drawer__status-btn--active {
+  border-color: #0e0e0e;
+  background: #0e0e0e;
+  color: #fff;
+}
+
+.rr-drawer__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}

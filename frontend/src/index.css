@@ -1,0 +1,86 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body,
+input,
+button,
+select,
+textarea {
+  font-family: "Mona Sans", "Manrope", sans-serif;
+}
+
+:root {
+  --rr-black: #0a0a0a;
+  --rr-near-black: #141414;
+  --rr-charcoal: #2b2b2b;
+  --rr-grey: #6e6e6e;
+  --rr-line: #d8d8d8;
+  --rr-off-white: #f5f5f4;
+  --rr-white: #ffffff;
+
+  /* Headings, wordmark, buttons: Mona Sans Condensed with Manrope/system fallback */
+  --rr-font-display: 'Mona Sans', 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Body copy, labels, inputs, links: Manrope with Mona Sans fallback */
+  --rr-font-body: 'Manrope', 'Mona Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --rr-font-mono: 'Courier New', Courier, monospace;
+
+  --rr-radius: 2px;
+  --rr-transition: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  --rr-transition-slow: 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Hard stop on any stray horizontal scroll, at every breakpoint. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--rr-font-body);
+  color: var(--rr-black);
+  background: var(--rr-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+img,
+svg {
+  max-width: 100%;
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

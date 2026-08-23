@@ -1,0 +1,130 @@
+.rr-shell {
+  min-height: 100vh;
+  background: #f7f7f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.rr-shell__bar {
+  background: #0e0e0e;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.rr-shell__brand {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: #f3f2ef;
+  font-size: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.rr-shell__divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(243, 242, 239, .1);
+}
+
+.rr-shell__nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.rr-shell__nav-item {
+  background: none;
+  color: rgba(243, 242, 239, .65);
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, color .15s;
+}
+
+.rr-shell__nav-item:hover {
+  color: #f3f2ef;
+}
+
+.rr-shell__nav-item--active {
+  background: #f3f2ef;
+  color: #0e0e0e;
+}
+
+.rr-shell__nav-item--active:hover {
+  color: #0e0e0e;
+}
+
+.rr-shell__spacer {
+  flex: 1;
+}
+
+.rr-shell__preview-label {
+  color: rgba(243, 242, 239, .5);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.rr-shell__preview-select {
+  background: #1d1d1f;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #f3f2ef;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rr-shell__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rr-shell__dept {
+  color: rgba(243, 242, 239, .65);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.rr-shell__logout {
+  background: none;
+  border: 1px solid rgba(243, 242, 239, .25);
+  color: #f3f2ef;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rr-shell__logout:hover {
+  background: rgba(243, 242, 239, .1);
+}
+
+.rr-shell__subbar {
+  background: #0e0e0e;
+  padding: 0 24px 18px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.rr-shell__body {
+  flex: 1;
+}

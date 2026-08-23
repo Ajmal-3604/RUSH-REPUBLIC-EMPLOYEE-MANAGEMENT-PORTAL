@@ -1,0 +1,452 @@
+.rr-auth {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--rr-white);
+  padding: 24px;
+  overflow-x: hidden;
+}
+ 
+.rr-auth__panel {
+  width: 100%;
+  max-width: 420px;
+  background: var(--rr-white);
+  padding: 28px 32px;
+  border: 1px solid var(--rr-black);
+  animation: rr-panel-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+ 
+@keyframes rr-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+ 
+.rr-auth__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 18px;
+}
+ 
+.rr-auth__logo {
+  width: 68px;
+  height: auto;
+  margin-bottom: 10px;
+}
+ 
+/* ── "Rush Republic" wordmark — LOGO, DO NOT CHANGE FONT ───────────── */
+.rr-auth__company {
+  font-family: var(--rr-font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0;
+}
+ 
+/* "Employee Management Portal" — heading font per spec */
+.rr-auth__tagline {
+  margin: 6px 0 0;
+  font-family: "Mona Sans Condensed", var(--rr-font-display, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rr-grey);
+}
+ 
+.rr-auth__divider {
+  height: 1px;
+  background: var(--rr-line);
+  border: none;
+  margin: 0 0 16px;
+}
+ 
+/* "Log in" / "Create account" — heading font */
+.rr-auth__title {
+  font-family: "Mona Sans Condensed", var(--rr-font-display, sans-serif);
+  font-stretch: 78%;
+  font-size: 19px;
+  font-weight: 800;
+  margin: 0 0 14px;
+  text-align: center;
+}
+ 
+.rr-field {
+  margin-bottom: 12px;
+}
+ 
+.rr-field label {
+  display: block;
+  font-family: "Manrope", var(--rr-font-body, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rr-charcoal);
+  margin-bottom: 7px;
+}
+ 
+.rr-field input,
+.rr-field select {
+  width: 100%;
+  padding: 6px 6px;
+  border: 1px solid var(--rr-line);
+  background: var(--rr-white);
+  font-family: "Manrope", var(--rr-font-body, sans-serif);
+  font-size: 12px;
+  color: var(--rr-black);
+  border-radius: var(--rr-radius);
+  transition: border-color var(--rr-transition), box-shadow var(--rr-transition),
+    background-color var(--rr-transition);
+}
+ 
+.rr-field input::placeholder,
+.rr-field select::placeholder {
+  font-family: "Manrope", var(--rr-font-body, sans-serif);
+}
+ 
+.rr-field input:hover,
+.rr-field select:hover {
+  border-color: var(--rr-charcoal);
+}
+ 
+.rr-field input:focus,
+.rr-field select:focus {
+  outline: none;
+  border-color: var(--rr-black);
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
+}
+ 
+.rr-field select {
+  cursor: pointer;
+}
+ 
+.rr-field-error {
+  margin-top: 6px;
+  font-family: "Manrope", var(--rr-font-body, sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rr-black);
+  background: var(--rr-off-white);
+  border-left: 2px solid var(--rr-black);
+  padding: 6px 10px;
+  animation: rr-fade-in 200ms ease both;
+}
+ 
+.rr-form-error {
+  font-family: "Manrope", var(--rr-font-body, sans-serif);
+  background: var(--rr-off-white);
+  border: 1px solid var(--rr-black);
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 18px;
+  animation: rr-fade-in 200ms ease both;
+}
+ 
+.rr-form-success {
+  font-family: "Manrope", var(--rr-font-body, sans-serif);
+  background: var(--rr-black);
+  color: var(--rr-white);
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 18px;
+  text-align: center;
+  animation: rr-fade-in 200ms ease both;
+}
+ 
+@keyframes rr-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+ 
+.rr-submit {
+  width: 100%;
+  padding: 14px;
+  background: var(--rr-black);
+  color: var(--rr-white);
+  border: 1px solid var(--rr-black);
+  font-family: "Manrope", var(--rr-font-body, sans-serif);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: var(--rr-radius);
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background var(--rr-transition), color var(--rr-transition),
+    transform var(--rr-transition), box-shadow var(--rr-transition);
+}
+ 
+.rr-submit:hover:not(:disabled) {
+  background: var(--rr-white);
+  color: var(--rr-black);
+  box-shadow: inset 0 0 0 1px var(--rr-black);
+  transform: translateY(-1px);
+}
+ 
+.rr-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+ 
+.rr-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+ 
+.rr-auth__switch {
+  text-align: center;
+  margin-top: 14px;
+  font-family: "Manrope", var(--rr-font-body, sans-serif);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rr-grey);
+}
+ 
+.rr-auth__switch a {
+  color: var(--rr-black);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px solid var(--rr-black);
+  transition: opacity var(--rr-transition), border-color var(--rr-transition);
+}
+ 
+.rr-auth__switch a:hover {
+  opacity: 0.65;
+}
+ 
+/* ---------------------------------------------------------------------
+   Responsiveness: mobile, tablet, laptop, desktop.
+   No fixed widths beyond the panel's own max-width, so nothing can
+   push past the viewport and force a horizontal scrollbar.
+------------------------------------------------------------------------ */
+@media (max-width: 480px) {
+  .rr-auth {
+    padding: 16px;
+  }
+  .rr-auth__panel {
+    padding: 32px 22px;
+  }
+  .rr-auth__company {
+    font-size: 22px;
+  }
+}
+ 
+@media (min-width: 481px) and (max-width: 768px) {
+  .rr-auth__panel {
+    padding: 40px 32px;
+  }
+}
+ 
+@media (max-height: 700px) {
+  .rr-auth__panel {
+    padding: 20px 28px;
+  }
+  .rr-auth__logo {
+    width: 52px;
+    margin-bottom: 6px;
+  }
+  .rr-auth__brand {
+    margin-bottom: 10px;
+  }
+}
+ 
+.rr-auth__panel--landscape {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  width: 100%;
+  max-width: 920px;
+  max-height: calc(100vh - 64px);
+  margin: 0 auto;
+  border: 1px solid var(--rr-black);
+  background: var(--rr-white);
+  overflow: hidden;
+  padding: 0;
+}
+ 
+/* ── Left: brand panel (solid contrast block) ─────────────── */
+ 
+.rr-auth__brand-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  background: var(--rr-white);
+  border-right: 1px solid #e0dcdc;
+}
+ 
+.rr-auth__brand-panel .rr-auth__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+ 
+.rr-auth__panel--landscape .rr-auth__logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+ 
+/* ── "Rush Republic" wordmark (landscape) — LOGO, DO NOT CHANGE FONT ── */
+.rr-auth__panel--landscape .rr-auth__company {
+  font-family: var(--rr-font-display);
+  font-size: clamp(24px, 2.6vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--rr-black);
+  margin: 0;
+}
+ 
+/* "Employee Management Portal" (landscape) — heading font */
+.rr-auth__panel--landscape .rr-auth__tagline {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.6);
+  margin: 0;
+  font-family: "Mona Sans Condensed", var(--rr-font-display, sans-serif);
+}
+ 
+/* ── Right: form panel ─────────────────────────────────────── */
+ 
+.rr-auth__form-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  padding: 36px 40px;
+  overflow-y: auto;
+}
+ 
+/* "Create account" (landscape) — heading font */
+.rr-auth__panel--landscape .rr-auth__title {
+  font-family: "Mona Sans Condensed", var(--rr-font-display, sans-serif);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--rr-black);
+}
+ 
+.rr-auth__panel--landscape .rr-auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+ 
+.rr-auth__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 18px;
+}
+ 
+.rr-auth__form-grid .rr-field {
+  margin: 0;
+}
+ 
+.rr-auth__panel--landscape .rr-submit {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+ 
+.rr-auth__panel--landscape .rr-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+ 
+.rr-auth__panel--landscape .rr-auth__switch {
+  margin: 0;
+  text-align: center;
+}
+ 
+/* ── Page-level fit: no scroll on the auth route ───────────── */
+ 
+.rr-auth:has(.rr-auth__panel--landscape) {
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 24px;
+  box-sizing: border-box;
+}
+ 
+/* ── Tablet: keep two columns, tighten spacing ─────────────── */
+ 
+@media (max-width: 900px) {
+  .rr-auth__panel--landscape {
+    max-width: 760px;
+  }
+ 
+  .rr-auth__brand-panel {
+    padding: 30px 26px;
+  }
+ 
+  .rr-auth__form-panel {
+    padding: 28px 30px;
+  }
+}
+ 
+/* ── Mobile: stack, branding on top ────────────────────────── */
+ 
+@media (max-width: 640px) {
+  .rr-auth:has(.rr-auth__panel--landscape) {
+    padding: 0;
+    align-items: stretch;
+  }
+ 
+  .rr-auth__panel--landscape {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+    max-height: none;
+    height: 100vh;
+    height: 100dvh;
+    border: none;
+  }
+ 
+  .rr-auth__brand-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--rr-line);
+    padding: 20px;
+    flex: none;
+  }
+ 
+  .rr-auth__brand-panel .rr-auth__brand {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+ 
+  .rr-auth__panel--landscape .rr-auth__logo {
+    width: 38px;
+    height: 38px;
+  }
+ 
+  .rr-auth__panel--landscape .rr-auth__company {
+    font-size: 18px;
+  }
+ 
+  .rr-auth__form-panel {
+    padding: 20px 20px 26px;
+  }
+ 
+  .rr-auth__form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

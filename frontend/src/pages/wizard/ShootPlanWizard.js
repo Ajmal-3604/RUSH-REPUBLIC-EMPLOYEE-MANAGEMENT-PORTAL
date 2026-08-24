@@ -59,7 +59,7 @@ function stepComplete(key, plan) {
 
 export default function ShootPlanWizard({ create = false }) {
   const { id } = useParams();
-  const { user, isElevated, activeDepartment } = useAuth();
+  const { isElevated, selectedDepartment } = useAuth();
   const { showToast, showError } = useToast();
   const navigate = useNavigate();
 
@@ -71,10 +71,11 @@ export default function ShootPlanWizard({ create = false }) {
   // No visible department picker in Shoot Details (the source design has no
   // department concept at all) -- silently stamp it from context instead:
   // the user's own department, or whichever department an elevated user is
-  // currently previewing as.
+  // currently previewing as. `selectedDepartment` already resolves to the
+  // user's own department for non-elevated users.
   const [form, setForm] = useState(() => ({
     ...EMPTY_FORM,
-    department: (isElevated ? activeDepartment : user?.department) || '',
+    department: selectedDepartment || '',
   }));
   const [fieldErrors, setFieldErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -300,15 +301,15 @@ export default function ShootPlanWizard({ create = false }) {
                 onCrewChanged={load}
               />
             )}
-            {activeStep === 'reels' && <StepReels {...stepProps} />}
-            {activeStep === 'photos' && <StepPhotos {...stepProps} />}
+            {activeStep === 'reels' && <StepReels {...stepProps} isElevated={isElevated} />}
+            {activeStep === 'photos' && <StepPhotos {...stepProps} isElevated={isElevated} />}
             {activeStep === 'crew' && <StepCrew {...stepProps} />}
             {activeStep === 'budget' && <StepBudget {...stepProps} />}
             {activeStep === 'review' && (
               <StepReview {...stepProps} goToStep={setActiveStep} isElevated={isElevated} onDeletePlan={handleDeletePlan} />
             )}
             {activeStep === 'print' && <StepPrintDetails plan={plan} goToStep={setActiveStep} />}
-            {activeStep === 'feedback' && <StepFeedback {...stepProps} />}
+            {activeStep === 'feedback' && <StepFeedback {...stepProps} isElevated={isElevated} />}
           </div>
 
           {activeStep === 'details' && (

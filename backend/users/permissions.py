@@ -1,4 +1,4 @@
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import BasePermission
 
 from .models import Department
 
@@ -70,35 +70,18 @@ class IsScriptWriter(BasePermission):
         return _in(request, Department.SCRIPT_WRITER, Department.ADMIN)
 
 
-class IsAdminOrReadOnly(BasePermission):
-    """Any authenticated user may read; only Admin or Production Head may write."""
-
-    message = 'Only Admin or Production Head can modify this resource.'
-
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        if request.method in SAFE_METHODS:
-            return True
-        return request.user.is_elevated
-
-
-class IsAdminOrOwnDepartment(BasePermission):
+class IsAuthenticatedFullAccess(BasePermission):
     """
-    Object-level guard for department-scoped records.
+    Full CRUD for any authenticated user, regardless of department.
 
-    Admin and Production Head may read and write anything. Every other user
-    may only touch rows whose `department` matches their own. This is the
-    backend half of the "cannot access any other department" rule -- the
-    frontend route guard is convenience, this is the enforcement.
+    Used by every "shared data" resource (Brands/Team/Freelancers/Models,
+    Shoot Plans and everything nested under them) -- department is purely
+    the UI context a user is viewing from, never a data-access boundary.
+    Only an explicit business rule (e.g. IsElevated for user-account
+    management) should narrow access below this.
     """
 
-    message = 'You can only access records belonging to your own department.'
+    message = 'You must be signed in to access this resource.'
 
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated)
-
-    def has_object_permission(self, request, view, obj):
-        if request.user.is_elevated:
-            return True
-        return getattr(obj, 'department', None) == request.user.department

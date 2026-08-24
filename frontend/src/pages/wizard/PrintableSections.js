@@ -2,6 +2,15 @@ import React from 'react';
 import { formatDate, formatTime } from '../../utils/format';
 import logo from '../../assets/rush-republic-logo.png';
 
+// Same palette as StepReels.js's REEL_APPROVAL_META / StepReview.js's
+// approval-workflow pills -- "Approved" reads identically everywhere.
+export const APPROVAL_BADGE_COLORS = {
+  DRAFT: { background: '#e9e8e4', color: '#3a3a38' },
+  PENDING_APPROVAL: { background: '#e6e0fb', color: '#4b3ba6' },
+  RETURNED_FOR_CHANGES: { background: '#ffdadf', color: '#b3213f' },
+  APPROVED: { background: '#d6f5e3', color: '#177a4c' },
+};
+
 /**
  * Read-only summary blocks shared between Review & Approval and Print
  * Details -- same data, same markup, same `rr-review-*` styling, so both
@@ -111,7 +120,21 @@ export function ReelsSection({ plan, goToStep }) {
       {reels.length === 0 && <div style={{ fontSize: 13, color: 'rgba(0,0,0,.5)' }}>No reels added.</div>}
       {reels.map((r, idx) => (
         <div key={r.id} className="rr-review-item">
-          <div className="rr-review-item__title">Reel {idx + 1} — {r.title}</div>
+          <div className="rr-review-item__title">
+            Reel {idx + 1} — {r.title}{' '}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 10,
+                textTransform: 'uppercase',
+                ...(APPROVAL_BADGE_COLORS[r.approval_status] || APPROVAL_BADGE_COLORS.DRAFT),
+              }}
+            >
+              {r.approval_status_display || 'Draft'}
+            </span>
+          </div>
           <div className="rr-review-fields">
             <div>
               <span className="field-label">Reference link</span>
@@ -157,7 +180,21 @@ export function PhotosSection({ plan, goToStep }) {
       {photoBriefs.length === 0 && <div style={{ fontSize: 13, color: 'rgba(0,0,0,.5)' }}>No photo briefs added.</div>}
       {photoBriefs.map((p, idx) => (
         <div key={p.id} className="rr-review-item">
-          <div className="rr-review-item__title">Shot {idx + 1} — {p.description || p.title || 'Untitled'}</div>
+          <div className="rr-review-item__title">
+            Shot {idx + 1} — {p.description || p.title || 'Untitled'}{' '}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 10,
+                textTransform: 'uppercase',
+                ...(APPROVAL_BADGE_COLORS[p.approval_status] || APPROVAL_BADGE_COLORS.DRAFT),
+              }}
+            >
+              {p.approval_status_display || 'Draft'}
+            </span>
+          </div>
           <div className="rr-review-fields">
             <div>
               <span className="field-label">Number of Photos</span>

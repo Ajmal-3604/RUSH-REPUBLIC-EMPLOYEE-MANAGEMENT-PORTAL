@@ -10,12 +10,15 @@ export const SHOOT_STATUS_META = {
   ARCHIVED: { label: 'Archived', bg: '#eeeeee', fg: '#7a7a76', icon: '▢' },
 };
 
+// Creative Review has been retired from the active workflow (see StepReview.js)
+// -- deliberately left out of the Home Page tabs/filters. CREATIVE_REVIEW stays
+// in SHOOT_STATUS_META below purely so a pre-existing historical record in
+// that status still renders a readable badge instead of a blank one.
 export const SHOOT_STATUS_ORDER = [
   'DRAFT',
   'PRODUCTION_REVIEW',
   'ON_HOLD',
   'RETURNED_FOR_CHANGES',
-  'CREATIVE_REVIEW',
   'APPROVED',
   'SHOOT_COMPLETED',
   'ARCHIVED',

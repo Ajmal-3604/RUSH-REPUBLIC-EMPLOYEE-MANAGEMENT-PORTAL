@@ -12,7 +12,7 @@ const STORAGE = {
   access: 'rr_access_token',
   refresh: 'rr_refresh_token',
   user: 'rr_user',
-  activeDepartment: 'rr_active_department',
+  selectedDepartment: 'rr_active_department',
 };
 
 /** Re-exported for the pages that already import it from here. */
@@ -33,13 +33,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   /**
-   * The department whose data is currently on screen.
+   * Two independent values, never conflated:
    *
-   * For every non-admin user this is permanently their own department. Admin is
-   * the only role that can point it somewhere else, via "Switch Department".
+   * - `originalRole` (derived below from `user.department`) is the role the
+   *   user actually authenticated with. It only ever changes on login/logout
+   *   -- switching departments must NEVER touch it.
+   * - `selectedDepartment` is just which department's data is currently on
+   *   screen. For every non-elevated user it's permanently their own
+   *   department; Admin and Production Head are the only roles that can
+   *   point it elsewhere, via "Switch Department".
    */
-  const [activeDepartment, setActiveDepartment] = useState(
-    () => localStorage.getItem(STORAGE.activeDepartment) || null
+  const [selectedDepartment, setSelectedDepartment] = useState(
+    () => localStorage.getItem(STORAGE.selectedDepartment) || null
   );
 
   useEffect(() => {
@@ -56,9 +61,13 @@ export function AuthProvider({ children }) {
         localStorage.setItem(STORAGE.user, JSON.stringify(data));
         if (data.department !== DEPARTMENTS.ADMIN && data.department !== DEPARTMENTS.PRODUCTION_HEAD) {
           // Defend against a stale/tampered value in localStorage.
-          setActiveDepartment(data.department);
-          localStorage.setItem(STORAGE.activeDepartment, data.department);
+          setSelectedDepartment(data.department);
+          localStorage.setItem(STORAGE.selectedDepartment, data.department);
         }
+        // Elevated roles keep whatever selectedDepartment was already
+        // restored from localStorage above, so a refresh preserves which
+        // department they were viewing -- originalRole (derived from
+        // `data.department`, the real DB value) is untouched either way.
       })
       .catch(() => {
         setUser(null);
@@ -72,9 +81,9 @@ export function AuthProvider({ children }) {
     localStorage.setItem(STORAGE.access, data.access);
     localStorage.setItem(STORAGE.refresh, data.refresh);
     localStorage.setItem(STORAGE.user, JSON.stringify(data.user));
-    localStorage.setItem(STORAGE.activeDepartment, data.user.department);
+    localStorage.setItem(STORAGE.selectedDepartment, data.user.department);
     setUser(data.user);
-    setActiveDepartment(data.user.department);
+    setSelectedDepartment(data.user.department);
     return data.user;
   }, []);
 
@@ -87,53 +96,62 @@ export function AuthProvider({ children }) {
     } catch {
       // Non-fatal: clear the local session even if blacklisting fails.
     } finally {
+      // Clears the authenticated user AND the selected-department state --
+      // a new login must never inherit the previous session's context.
       clearSession();
       setUser(null);
-      setActiveDepartment(null);
+      setSelectedDepartment(null);
     }
   }, []);
 
-  const isAdmin = !!user && user.department === DEPARTMENTS.ADMIN;
-  const isProductionHead = !!user && user.department === DEPARTMENTS.PRODUCTION_HEAD;
+  // originalRole: the role the user actually logged in with. Derived fresh
+  // from `user.department` (the real, DB-backed value from /profile) on
+  // every render -- switching departments never writes to `user`, so this
+  // can never drift.
+  const originalRole = user?.department || null;
+  const isAdmin = originalRole === DEPARTMENTS.ADMIN;
+  const isProductionHead = originalRole === DEPARTMENTS.PRODUCTION_HEAD;
   const isElevated = isAdmin || isProductionHead;
 
   /**
    * Admin and Production Head only. The backend re-checks the caller is
    * elevated (and that only Admin can switch into Admin) and hands back the
-   * route, so this cannot be forced by editing localStorage.
+   * route, so this cannot be forced by editing localStorage. Only ever
+   * updates `selectedDepartment` -- `originalRole`/`user` are untouched.
    */
   const switchDepartment = useCallback(
     async (department) => {
-      if (!user || !(user.department === DEPARTMENTS.ADMIN || user.department === DEPARTMENTS.PRODUCTION_HEAD)) {
+      if (!isElevated) {
         throw new Error('Only Admin or Production Head can switch departments.');
       }
-      if (department === DEPARTMENTS.ADMIN && user.department !== DEPARTMENTS.ADMIN) {
+      if (department === DEPARTMENTS.ADMIN && !isAdmin) {
         throw new Error('Only Admin can switch into the Admin department.');
       }
       const data = await authService.switchDepartment(department);
-      setActiveDepartment(data.department);
-      localStorage.setItem(STORAGE.activeDepartment, data.department);
+      setSelectedDepartment(data.department);
+      localStorage.setItem(STORAGE.selectedDepartment, data.department);
       return data;
     },
-    [user]
+    [isElevated, isAdmin]
   );
 
   const value = useMemo(
     () => ({
       user,
       loading,
+      originalRole,
       isAdmin,
       isProductionHead,
       isElevated,
-      // Non-elevated users can never have an active department other than their own.
-      activeDepartment: isElevated ? activeDepartment : user?.department || null,
+      // Non-elevated users can never have a selected department other than their own.
+      selectedDepartment: isElevated ? selectedDepartment : originalRole,
       login,
       signup,
       logout,
       switchDepartment,
-      setActiveDepartment,
+      setSelectedDepartment,
     }),
-    [user, loading, isAdmin, isProductionHead, isElevated, activeDepartment, login, signup, logout, switchDepartment]
+    [user, loading, originalRole, isAdmin, isProductionHead, isElevated, selectedDepartment, login, signup, logout, switchDepartment]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -6,15 +6,15 @@ import { extractApiError } from '../api/services';
 import { switchableDepartments, departmentLabel } from '../constants/departments';
 import './AppShell.css';
 
-const ELEVATED_NAV_ITEMS = [
+// Brands/Team/Freelancers/Models are shared data -- every department gets
+// the same nav, not just Admin/Production Head.
+const NAV_ITEMS = [
   { key: 'shoot-plans', label: 'Shoot Plans', path: '/shoot-plans' },
   { key: 'brands', label: 'Brands', path: '/brands' },
   { key: 'team', label: 'Team', path: '/team' },
   { key: 'freelancers', label: 'Freelancers', path: '/freelancers' },
   { key: 'models', label: 'Models', path: '/models' },
 ];
-
-const DEPARTMENT_NAV_ITEMS = [{ key: 'shoot-plans', label: 'Shoot Plans', path: '/shoot-plans' }];
 
 /**
  * Dark top-bar app shell used by every authenticated page.
@@ -24,11 +24,11 @@ const DEPARTMENT_NAV_ITEMS = [{ key: 'shoot-plans', label: 'Shoot Plans', path: 
  * the approved design reference exactly.
  */
 export default function AppShell({ active, subbar, children }) {
-  const { user, isElevated, activeDepartment, switchDepartment, logout } = useAuth();
+  const { originalRole, isElevated, selectedDepartment, switchDepartment, logout } = useAuth();
   const navigate = useNavigate();
   const { showError } = useToast();
 
-  const navItems = isElevated ? ELEVATED_NAV_ITEMS : DEPARTMENT_NAV_ITEMS;
+  const navItems = NAV_ITEMS;
 
   const handleLogout = async () => {
     await logout();
@@ -65,10 +65,16 @@ export default function AppShell({ active, subbar, children }) {
             <select
               id="preview-as"
               className="rr-shell__preview-select"
-              value={activeDepartment || user.department}
+              value={selectedDepartment || originalRole}
               onChange={async (e) => {
                 const value = e.target.value;
-                if (value === user.department) return;
+                // Compare against the currently-selected department, not the
+                // original role -- comparing against originalRole meant
+                // switching back to it (e.g. Admin -> Production Coordinator
+                // -> Admin) silently no-opped, since `value` always equals
+                // originalRole in that case, so selectedDepartment never
+                // actually updated back.
+                if (value === (selectedDepartment || originalRole)) return;
                 try {
                   await switchDepartment(value);
                 } catch (err) {
@@ -76,8 +82,8 @@ export default function AppShell({ active, subbar, children }) {
                 }
               }}
             >
-              <option value={user.department}>{departmentLabel(user.department)}</option>
-              {switchableDepartments(user.department).map((d) => (
+              <option value={originalRole}>{departmentLabel(originalRole)}</option>
+              {switchableDepartments(originalRole).map((d) => (
                 <option key={d.value} value={d.value}>
                   {d.label}
                 </option>
@@ -85,7 +91,7 @@ export default function AppShell({ active, subbar, children }) {
             </select>
           </>
         ) : (
-          <span className="rr-shell__dept">{departmentLabel(user?.department)}</span>
+          <span className="rr-shell__dept">{departmentLabel(originalRole)}</span>
         )}
 
         <div className="rr-shell__user">

@@ -4,8 +4,6 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 
 import ProtectedRoute from './components/ProtectedRoute';
-import RoleProtectedRoute from './components/RoleProtectedRoute';
-import { DEPARTMENTS } from './constants/departments';
 
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -63,37 +61,37 @@ export default function App() {
               }
             />
 
-            {/* Directory modules -- Admin and Production Head only. */}
+            {/* Directory modules -- shared data, every department gets full access. */}
             <Route
               path="/brands"
               element={
-                <RoleProtectedRoute allowedDepartments={[DEPARTMENTS.PRODUCTION_HEAD]}>
+                <ProtectedRoute>
                   <Brands />
-                </RoleProtectedRoute>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/team"
               element={
-                <RoleProtectedRoute allowedDepartments={[DEPARTMENTS.PRODUCTION_HEAD]}>
+                <ProtectedRoute>
                   <Team />
-                </RoleProtectedRoute>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/freelancers"
               element={
-                <RoleProtectedRoute allowedDepartments={[DEPARTMENTS.PRODUCTION_HEAD]}>
+                <ProtectedRoute>
                   <Freelancers />
-                </RoleProtectedRoute>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/models"
               element={
-                <RoleProtectedRoute allowedDepartments={[DEPARTMENTS.PRODUCTION_HEAD]}>
+                <ProtectedRoute>
                   <Models />
-                </RoleProtectedRoute>
+                </ProtectedRoute>
               }
             />
 

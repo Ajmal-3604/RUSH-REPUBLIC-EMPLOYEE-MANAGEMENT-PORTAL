@@ -18,13 +18,21 @@ const STATUS_META = {
 
 // Primary forward action + what's next, per status. Secondary branches
 // (hold / return for changes) stay as smaller links next to it.
+//
+// The active workflow is only two steps: Submit for Internal Approval, then
+// Production Head Approval (PRODUCTION_REVIEW -> APPROVED directly). The
+// former "Creative Review Final Approval" stage has been retired -- Mark
+// Shoot Completed now lives in the Feedback step instead of here. CREATIVE_REVIEW
+// stays mapped (folded into the same Approve -> APPROVED action) purely so a
+// pre-existing record parked in that legacy status still has a way forward;
+// no new plan can ever land there again.
 const PRIMARY_ACTION = {
   DRAFT: { next: 'Awaiting submission', label: 'Submit for Internal Approval', to: 'PRODUCTION_REVIEW' },
   RETURNED_FOR_CHANGES: { next: 'Awaiting resubmission', label: 'Resubmit for Internal Approval', to: 'PRODUCTION_REVIEW' },
-  PRODUCTION_REVIEW: { next: 'Awaiting Production Head approval', label: 'Approve', to: 'CREATIVE_REVIEW' },
-  CREATIVE_REVIEW: { next: 'Awaiting final approval', label: 'Final Approve', to: 'APPROVED' },
+  PRODUCTION_REVIEW: { next: 'Awaiting Production Head approval', label: 'Approve', to: 'APPROVED' },
+  CREATIVE_REVIEW: { next: 'Awaiting Production Head approval', label: 'Approve', to: 'APPROVED' },
   ON_HOLD: { next: 'Paused — resume when ready', label: 'Resume Review', to: 'PRODUCTION_REVIEW' },
-  APPROVED: { next: 'Ready to shoot', label: 'Mark Shoot Completed', to: 'SHOOT_COMPLETED' },
+  APPROVED: { next: 'Ready to shoot — mark completed from the Feedback tab', label: null, to: null },
   SHOOT_COMPLETED: { next: 'Ready to archive', label: 'Archive', to: 'ARCHIVED' },
   ARCHIVED: { next: 'No further action', label: null, to: null },
 };
@@ -138,6 +146,8 @@ export default function StepReview({ plan, onChanged, goToStep, isElevated, onDe
 
   const meta = STATUS_META[plan?.status] || STATUS_META.DRAFT;
   const primary = PRIMARY_ACTION[plan?.status] || PRIMARY_ACTION.DRAFT;
+  const step1Done = !['DRAFT', 'RETURNED_FOR_CHANGES'].includes(plan?.status);
+  const step2Done = ['APPROVED', 'SHOOT_COMPLETED', 'ARCHIVED'].includes(plan?.status);
 
   const renderWorkflowActions = () => {
     if (!isElevated || !primary.label) return null;
@@ -336,7 +346,15 @@ export default function StepReview({ plan, onChanged, goToStep, isElevated, onDe
             {meta.label.toUpperCase()}
           </span>
         </div>
-        <div style={{ fontSize: 13 }}>
+        <div className="rr-checklist-row">
+          <span style={{ color: step1Done ? '#1fac71' : '#c9822b' }}>{step1Done ? '✓' : '○'}</span>
+          <span style={{ flex: 1 }}>Step 1: Submit for Internal Approval</span>
+        </div>
+        <div className="rr-checklist-row">
+          <span style={{ color: step2Done ? '#1fac71' : '#c9822b' }}>{step2Done ? '✓' : '○'}</span>
+          <span style={{ flex: 1 }}>Step 2: Production Head Approval</span>
+        </div>
+        <div style={{ fontSize: 13, marginTop: 8 }}>
           <div>
             Stage: <b>{meta.label}</b>
           </div>
@@ -350,7 +368,7 @@ export default function StepReview({ plan, onChanged, goToStep, isElevated, onDe
             🔒 Only Admin or Production Head can move this shoot plan's status.
           </div>
         )}
-        {isElevated && onDeletePlan && (
+        {onDeletePlan && (
           <div className="rr-print-hide" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(0,0,0,.08)' }}>
             <button type="button" className="rr-wiz__btn" onClick={onDeletePlan} style={{ color: '#b3213f', borderColor: 'rgba(179,33,63,.3)' }}>
               Delete shoot plan

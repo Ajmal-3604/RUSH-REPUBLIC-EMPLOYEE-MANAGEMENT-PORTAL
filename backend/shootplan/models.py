@@ -93,8 +93,9 @@ class ShootPlanChild(TimeStampedModel):
     """
     Base for records owned by a ShootPlan.
 
-    Exposes a `department` property so the shared IsAdminOrOwnDepartment
-    object permission works uniformly across every model in this app.
+    Exposes a `department` property so the optional ?department=<CODE>
+    filter (used by the department switcher to narrow the view) works
+    uniformly across every model in this app.
     """
 
     class Meta:
@@ -295,6 +296,19 @@ class Reel(ShootPlanChild):
         EDITING = 'EDITING', 'Editing'
         PUBLISHED = 'PUBLISHED', 'Published'
 
+    class ApprovalStatus(models.TextChoices):
+        """
+        Submission/approval workflow -- separate from `status` above, which
+        tracks production progress (Idea/Scripted/Shot/...), not review state.
+        Naming mirrors ShootPlan.Status (PENDING_APPROVAL ~ PRODUCTION_REVIEW,
+        RETURNED_FOR_CHANGES is the literal same string) for consistency.
+        """
+
+        DRAFT = 'DRAFT', 'Draft'
+        PENDING_APPROVAL = 'PENDING_APPROVAL', 'Pending Approval'
+        RETURNED_FOR_CHANGES = 'RETURNED_FOR_CHANGES', 'Returned for Changes'
+        APPROVED = 'APPROVED', 'Approved'
+
     shoot_plan = models.ForeignKey(ShootPlan, on_delete=models.CASCADE, related_name='reels')
     order = models.PositiveIntegerField(default=0)
     title = models.CharField(max_length=200, blank=True)
@@ -306,6 +320,27 @@ class Reel(ShootPlanChild):
     duration_seconds = models.PositiveIntegerField(default=30)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.IDEA)
     assigned_to = models.CharField(max_length=150, blank=True)
+
+    # Approval workflow -- "at a glance" fields for the current state. The
+    # full, preserved-across-resubmissions history lives in ReviewApproval
+    # rows (reel FK), reused from the existing shoot-plan-level review model
+    # rather than a duplicate history table.
+    approval_status = models.CharField(
+        max_length=25, choices=ApprovalStatus.choices, default=ApprovalStatus.DRAFT
+    )
+    suggestions = models.TextField(blank=True, verbose_name='Latest return-for-changes suggestions')
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    returned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
+    returned_at = models.DateTimeField(null=True, blank=True)
 
     assigned_models = models.ManyToManyField('PlanModel', blank=True, related_name='reels')
     assigned_locations = models.ManyToManyField('PlanLocation', blank=True, related_name='reels')
@@ -353,6 +388,18 @@ class Photo(ShootPlanChild):
         RETOUCHING = 'RETOUCHING', 'Retouching'
         DELIVERED = 'DELIVERED', 'Delivered'
 
+    class ApprovalStatus(models.TextChoices):
+        """
+        Submission/approval workflow -- separate from `status` above, which
+        tracks production progress (Planned/Shot/Retouching/...), not review
+        state. Mirrors Reel.ApprovalStatus exactly for consistency.
+        """
+
+        DRAFT = 'DRAFT', 'Draft'
+        PENDING_APPROVAL = 'PENDING_APPROVAL', 'Pending Approval'
+        RETURNED_FOR_CHANGES = 'RETURNED_FOR_CHANGES', 'Returned for Changes'
+        APPROVED = 'APPROVED', 'Approved'
+
     shoot_plan = models.ForeignKey(ShootPlan, on_delete=models.CASCADE, related_name='photos')
     order = models.PositiveIntegerField(default=0)
     title = models.CharField(max_length=200, blank=True)
@@ -362,6 +409,26 @@ class Photo(ShootPlanChild):
     notes_to_designer = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNED)
     reference_link = models.URLField(blank=True)
+
+    # Approval workflow -- "at a glance" fields for the current state. The
+    # full, preserved-across-resubmissions history lives in ReviewApproval
+    # rows (photo FK), reused from the same model Reel's workflow uses.
+    approval_status = models.CharField(
+        max_length=25, choices=ApprovalStatus.choices, default=ApprovalStatus.DRAFT
+    )
+    suggestions = models.TextField(blank=True, verbose_name='Latest return-for-changes suggestions')
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    returned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
+    returned_at = models.DateTimeField(null=True, blank=True)
 
     assigned_models = models.ManyToManyField('PlanModel', blank=True, related_name='photo_briefs')
     assigned_locations = models.ManyToManyField('PlanLocation', blank=True, related_name='photo_briefs')
@@ -496,15 +563,28 @@ class BudgetItem(ShootPlanChild):
 
 
 class ReviewApproval(ShootPlanChild):
-    """A review round on a shoot plan, ending in approval or rejection."""
+    """
+    A review round -- either on the shoot plan as a whole, or (when `reel` or
+    `photo` is set) on a single Reel/Photo shot's submit/approve/return-for-
+    changes workflow. One shared model instead of a separate history table
+    per entity: `remarks` already doubles as "suggestions" and
+    `reviewer`/`reviewed_at` already capture who acted and when.
+    """
 
     class Status(models.TextChoices):
+        SUBMITTED = 'SUBMITTED', 'Submitted'
         PENDING = 'PENDING', 'Pending'
         APPROVED = 'APPROVED', 'Approved'
         REJECTED = 'REJECTED', 'Rejected'
         CHANGES_REQUESTED = 'CHANGES_REQUESTED', 'Changes Requested'
 
     shoot_plan = models.ForeignKey(ShootPlan, on_delete=models.CASCADE, related_name='reviews')
+    reel = models.ForeignKey(
+        'Reel', null=True, blank=True, on_delete=models.CASCADE, related_name='approval_history'
+    )
+    photo = models.ForeignKey(
+        'Photo', null=True, blank=True, on_delete=models.CASCADE, related_name='approval_history'
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     remarks = models.TextField(blank=True)
     reviewer = models.ForeignKey(

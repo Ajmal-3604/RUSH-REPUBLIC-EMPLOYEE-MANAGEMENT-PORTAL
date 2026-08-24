@@ -129,6 +129,14 @@
   display: none;
 }
 
+/* Full-page storyboard appendix: only ever visible in the printed/
+   downloaded output, as the final page(s) (see @media print in
+   WizardShell.css) -- stays invisible on screen, where the storyboard
+   already has its own thumbnail gallery inside the Reels step. */
+.rr-print-storyboard {
+  display: none;
+}
+
 .rr-note-block {
   margin-top: 10px;
   background: #f7f7f5;

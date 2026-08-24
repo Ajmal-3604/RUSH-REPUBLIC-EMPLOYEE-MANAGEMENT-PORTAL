@@ -8,7 +8,7 @@ import { Field, SelectField, TextAreaField } from '../components/FormFields';
 import { ErrorAlert, LoadingState } from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { feedbackService, extractApiError, extractFieldErrors } from '../api/services';
-import { FEEDBACK_CATEGORIES, FEEDBACK_STATUS, departmentLabel } from '../constants/departments';
+import { FEEDBACK_CATEGORIES, FEEDBACK_STATUS } from '../constants/departments';
 import { formatDateTime } from '../utils/format';
 
 const EMPTY_FORM = {
@@ -21,7 +21,7 @@ const EMPTY_FORM = {
 };
 
 export default function Feedback() {
-  const { isElevated, user, activeDepartment } = useAuth();
+  const { isElevated } = useAuth();
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +153,7 @@ export default function Feedback() {
   return (
     <AppShell active="shoot-plans">
     <PageHeader
-      eyebrow={isElevated ? 'All departments' : departmentLabel(activeDepartment || user?.department)}
+      eyebrow="All departments"
       title="Feedback"
       actions={
         <button type="button" className="rr-btn rr-btn--sm" onClick={openCreate}>

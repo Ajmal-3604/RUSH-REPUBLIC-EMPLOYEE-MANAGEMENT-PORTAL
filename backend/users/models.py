@@ -99,9 +99,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_elevated(self):
-        """Admin and Production Head both get cross-department access; everyone else is scoped to their own."""
+        """
+        Admin and Production Head both get the department switcher and reach
+        into every department's interface. `department` itself is never a
+        data-access boundary (all shared data is visible to every role) --
+        this only gates UI-level things like the switcher and user-account
+        management.
+        """
         return self.is_admin or self.is_production_head
-
-    def can_access_department(self, department):
-        """Admin and Production Head reach every department; everyone else only their own."""
-        return self.is_elevated or self.department == department

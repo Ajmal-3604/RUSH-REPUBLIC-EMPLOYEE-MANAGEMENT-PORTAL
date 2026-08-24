@@ -1,9 +1,10 @@
 from django.db.models import Count, Prefetch, Q, Sum
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from users.permissions import IsAdminOrOwnDepartment
+from users.permissions import IsAuthenticatedFullAccess, IsElevated
 
 from .models import (
     ShootPlan,
@@ -49,25 +50,24 @@ from .serializers import (
 
 class DepartmentScopedViewSet(viewsets.ModelViewSet):
     """
-    Base viewset for the department-scoped Shoot Plan models.
+    Base viewset for the Shoot Plan family of models.
 
-    Admin sees everything and may optionally narrow with ?department=<CODE>.
-    Every other user is hard-filtered to their own department -- there is no
-    query parameter that widens it.
+    Shoot Plans are shared data -- every authenticated user, regardless of
+    department, can see and edit all of them. `department` is only the
+    interface context a plan was created/is being viewed under; passing
+    ?department=<CODE> optionally narrows the list to that context (used by
+    the department switcher), it is not an access boundary.
     """
 
-    permission_classes = [IsAdminOrOwnDepartment]
+    permission_classes = [IsAuthenticatedFullAccess]
     # Lookup path from the model to the owning department, e.g. 'shoot_plan__department'.
     department_lookup = 'department'
 
     def scope_queryset(self, queryset):
-        user = self.request.user
-        if user.is_elevated:
-            requested = self.request.query_params.get('department')
-            if requested:
-                return queryset.filter(**{self.department_lookup: requested})
-            return queryset
-        return queryset.filter(**{self.department_lookup: user.department})
+        requested = self.request.query_params.get('department')
+        if requested:
+            return queryset.filter(**{self.department_lookup: requested})
+        return queryset
 
 
 class ShootPlanViewSet(DepartmentScopedViewSet):
@@ -129,15 +129,6 @@ class ShootPlanViewSet(DepartmentScopedViewSet):
 
         return queryset
 
-    def destroy(self, request, *args, **kwargs):
-        """Only Admin may delete a whole shoot plan -- it cascades to every category."""
-        if not request.user.is_elevated:
-            return Response(
-                {'detail': 'Only Admin can delete a shoot plan.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        return super().destroy(request, *args, **kwargs)
-
     @action(detail=False, methods=['get'])
     def summary(self, request):
         queryset = self.scope_queryset(ShootPlan.objects.all())
@@ -176,17 +167,221 @@ class ShootPlanChildViewSet(DepartmentScopedViewSet):
 
 
 class ReelViewSet(ShootPlanChildViewSet):
-    """/api/reels/ - reel deliverables. Filter with ?shoot_plan=<id>."""
+    """
+    /api/reels/ - reel deliverables. Filter with ?shoot_plan=<id>.
+
+    Submit/approve/return-for-changes workflow lives in the actions below --
+    approval_status and friends are read-only on the plain serializer (see
+    ReelSerializer), so a normal PATCH can never set or bypass them.
+    """
 
     serializer_class = ReelSerializer
     base_queryset = Reel.objects.all()
 
+    @action(detail=True, methods=['post'])
+    def submit(self, request, pk=None):
+        """
+        Any user with edit access (reels are shared data) submits a reel for
+        Admin/Production Head review. DRAFT or RETURNED_FOR_CHANGES ->
+        PENDING_APPROVAL. Refuses an incomplete reel, and refuses to
+        resubmit one that's already pending or already approved.
+        """
+        reel = self.get_object()
+        if reel.approval_status == Reel.ApprovalStatus.PENDING_APPROVAL:
+            return Response({'detail': 'This reel is already pending approval.'}, status=status.HTTP_400_BAD_REQUEST)
+        if reel.approval_status == Reel.ApprovalStatus.APPROVED:
+            return Response({'detail': 'This reel is already approved.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        errors = {}
+        if not reel.title.strip():
+            errors['title'] = ['Reel title is required before submitting.']
+        if not reel.concept.strip():
+            errors['concept'] = ['Script is required before submitting.']
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        was_returned = reel.approval_status == Reel.ApprovalStatus.RETURNED_FOR_CHANGES
+        reel.approval_status = Reel.ApprovalStatus.PENDING_APPROVAL
+        reel.submitted_by = user
+        reel.submitted_at = timezone.now()
+        reel.save(update_fields=['approval_status', 'submitted_by', 'submitted_at', 'updated_at'])
+        ReviewApproval.objects.create(
+            shoot_plan=reel.shoot_plan, reel=reel,
+            status=ReviewApproval.Status.SUBMITTED, reviewer=user, reviewed_at=timezone.now(),
+        )
+        ActivityLog.objects.create(
+            shoot_plan=reel.shoot_plan,
+            title=f'Reel "{reel.title}" {"resubmitted" if was_returned else "submitted"} for approval',
+            actor=user,
+        )
+        return Response(ReelSerializer(reel, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsElevated])
+    def approve(self, request, pk=None):
+        """Admin/Production Head only -- enforced by IsElevated, not just a hidden button."""
+        reel = self.get_object()
+        if reel.approval_status != Reel.ApprovalStatus.PENDING_APPROVAL:
+            return Response(
+                {'detail': 'Only a reel pending approval can be approved.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+        now = timezone.now()
+        reel.approval_status = Reel.ApprovalStatus.APPROVED
+        reel.approved_by = user
+        reel.approved_at = now
+        reel.suggestions = ''
+        reel.save(update_fields=['approval_status', 'approved_by', 'approved_at', 'suggestions', 'updated_at'])
+        ReviewApproval.objects.create(
+            shoot_plan=reel.shoot_plan, reel=reel,
+            status=ReviewApproval.Status.APPROVED, reviewer=user, reviewed_at=now,
+        )
+        ActivityLog.objects.create(shoot_plan=reel.shoot_plan, title=f'Reel "{reel.title}" approved', actor=user)
+        return Response(ReelSerializer(reel, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'], url_path='return', permission_classes=[IsElevated])
+    def return_for_changes(self, request, pk=None):
+        """Admin/Production Head only. Suggestions are mandatory -- 400 without them."""
+        reel = self.get_object()
+        if reel.approval_status != Reel.ApprovalStatus.PENDING_APPROVAL:
+            return Response(
+                {'detail': 'Only a reel pending approval can be returned for changes.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        suggestions = (request.data.get('suggestions') or '').strip()
+        if not suggestions:
+            return Response(
+                {'suggestions': ['Please provide the changes required before returning this Reel for changes.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = request.user
+        now = timezone.now()
+        reel.approval_status = Reel.ApprovalStatus.RETURNED_FOR_CHANGES
+        reel.suggestions = suggestions
+        reel.returned_by = user
+        reel.returned_at = now
+        reel.save(update_fields=['approval_status', 'suggestions', 'returned_by', 'returned_at', 'updated_at'])
+        ReviewApproval.objects.create(
+            shoot_plan=reel.shoot_plan, reel=reel,
+            status=ReviewApproval.Status.CHANGES_REQUESTED, remarks=suggestions, reviewer=user, reviewed_at=now,
+        )
+        ActivityLog.objects.create(
+            shoot_plan=reel.shoot_plan, title=f'Reel "{reel.title}" returned for changes', actor=user
+        )
+        return Response(ReelSerializer(reel, context={'request': request}).data)
+
 
 class PhotoViewSet(ShootPlanChildViewSet):
-    """/api/photos/ - photo brief / shot-list entries. Filter with ?shoot_plan=<id>."""
+    """
+    /api/photos/ - photo brief / shot-list entries. Filter with ?shoot_plan=<id>.
+
+    Submit/approve/return-for-changes workflow mirrors ReelViewSet exactly --
+    approval_status and friends are read-only on the plain serializer, so a
+    normal PATCH can never set or bypass them.
+    """
 
     serializer_class = PhotoSerializer
     base_queryset = Photo.objects.all()
+
+    @action(detail=True, methods=['post'])
+    def submit(self, request, pk=None):
+        """
+        Any user with edit access (shots are shared data) submits a shot for
+        Admin/Production Head review. DRAFT or RETURNED_FOR_CHANGES ->
+        PENDING_APPROVAL. Refuses an incomplete shot, and refuses to
+        resubmit one that's already pending or already approved.
+        """
+        photo = self.get_object()
+        if photo.approval_status == Photo.ApprovalStatus.PENDING_APPROVAL:
+            return Response({'detail': 'This shot is already pending approval.'}, status=status.HTTP_400_BAD_REQUEST)
+        if photo.approval_status == Photo.ApprovalStatus.APPROVED:
+            return Response({'detail': 'This shot is already approved.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not photo.description.strip():
+            return Response(
+                {'description': ['Shot description is required before submitting.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = request.user
+        was_returned = photo.approval_status == Photo.ApprovalStatus.RETURNED_FOR_CHANGES
+        photo.approval_status = Photo.ApprovalStatus.PENDING_APPROVAL
+        photo.submitted_by = user
+        photo.submitted_at = timezone.now()
+        photo.save(update_fields=['approval_status', 'submitted_by', 'submitted_at', 'updated_at'])
+        ReviewApproval.objects.create(
+            shoot_plan=photo.shoot_plan, photo=photo,
+            status=ReviewApproval.Status.SUBMITTED, reviewer=user, reviewed_at=timezone.now(),
+        )
+        ActivityLog.objects.create(
+            shoot_plan=photo.shoot_plan,
+            title=f'Shot "{photo.title or photo.description[:40]}" {"resubmitted" if was_returned else "submitted"} for approval',
+            actor=user,
+        )
+        return Response(PhotoSerializer(photo, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsElevated])
+    def approve(self, request, pk=None):
+        """Admin/Production Head only -- enforced by IsElevated, not just a hidden button."""
+        photo = self.get_object()
+        if photo.approval_status != Photo.ApprovalStatus.PENDING_APPROVAL:
+            return Response(
+                {'detail': 'Only a shot pending approval can be approved.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+        now = timezone.now()
+        photo.approval_status = Photo.ApprovalStatus.APPROVED
+        photo.approved_by = user
+        photo.approved_at = now
+        photo.suggestions = ''
+        photo.save(update_fields=['approval_status', 'approved_by', 'approved_at', 'suggestions', 'updated_at'])
+        ReviewApproval.objects.create(
+            shoot_plan=photo.shoot_plan, photo=photo,
+            status=ReviewApproval.Status.APPROVED, reviewer=user, reviewed_at=now,
+        )
+        ActivityLog.objects.create(
+            shoot_plan=photo.shoot_plan, title=f'Shot "{photo.title or photo.description[:40]}" approved', actor=user
+        )
+        return Response(PhotoSerializer(photo, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'], url_path='return', permission_classes=[IsElevated])
+    def return_for_changes(self, request, pk=None):
+        """Admin/Production Head only. Suggestions are mandatory -- 400 without them."""
+        photo = self.get_object()
+        if photo.approval_status != Photo.ApprovalStatus.PENDING_APPROVAL:
+            return Response(
+                {'detail': 'Only a shot pending approval can be returned for changes.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        suggestions = (request.data.get('suggestions') or '').strip()
+        if not suggestions:
+            return Response(
+                {'suggestions': ['Please provide the changes required before returning this Shot for changes.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = request.user
+        now = timezone.now()
+        photo.approval_status = Photo.ApprovalStatus.RETURNED_FOR_CHANGES
+        photo.suggestions = suggestions
+        photo.returned_by = user
+        photo.returned_at = now
+        photo.save(update_fields=['approval_status', 'suggestions', 'returned_by', 'returned_at', 'updated_at'])
+        ReviewApproval.objects.create(
+            shoot_plan=photo.shoot_plan, photo=photo,
+            status=ReviewApproval.Status.CHANGES_REQUESTED, remarks=suggestions, reviewer=user, reviewed_at=now,
+        )
+        ActivityLog.objects.create(
+            shoot_plan=photo.shoot_plan,
+            title=f'Shot "{photo.title or photo.description[:40]}" returned for changes',
+            actor=user,
+        )
+        return Response(PhotoSerializer(photo, context={'request': request}).data)
 
 
 class PlanModelViewSet(ShootPlanChildViewSet):
@@ -222,20 +417,17 @@ class NestedGalleryViewSet(viewsets.ModelViewSet):
     Shared list/create/delete for a photo gallery attached to a Shoot Plan
     grandchild (a model booking, a location, a prop, a reel, a photo brief).
 
-    Scoped through the parent's shoot_plan department, two joins deep --
-    e.g. `plan_model__shoot_plan__department` -- so a user can only attach
-    or view photos on records their department (or Admin) already owns.
+    Shoot Plan data is shared across every department (see
+    DepartmentScopedViewSet) -- any authenticated user can view or attach
+    photos here, regardless of which department owns the parent record.
     """
 
-    permission_classes = [IsAdminOrOwnDepartment]
+    permission_classes = [IsAuthenticatedFullAccess]
     parent_field = None       # e.g. 'plan_model'
     department_lookup = None  # e.g. 'plan_model__shoot_plan__department'
 
     def get_queryset(self):
-        user = self.request.user
         queryset = self.base_queryset
-        if not user.is_elevated:
-            queryset = queryset.filter(**{self.department_lookup: user.department})
         parent_id = self.request.query_params.get(self.parent_field)
         if parent_id:
             queryset = queryset.filter(**{f'{self.parent_field}_id': parent_id})

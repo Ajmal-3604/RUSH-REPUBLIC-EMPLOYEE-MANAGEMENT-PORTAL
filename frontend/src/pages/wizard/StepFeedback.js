@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { ErrorAlert } from '../../components/EmptyState';
-import { feedbackService, extractApiError } from '../../api/services';
+import { feedbackService, shootPlanService, extractApiError } from '../../api/services';
 import { formatDateTime } from '../../utils/format';
 
-export default function StepFeedback({ plan, onChanged }) {
+export default function StepFeedback({ plan, onChanged, isElevated }) {
   const entries = plan?.feedback || [];
 
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [justSavedNew, setJustSavedNew] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -45,6 +46,19 @@ export default function StepFeedback({ plan, onChanged }) {
   const cancelEdit = () => {
     setEditingId(null);
     setEditText('');
+  };
+
+  const handleMarkCompleted = async () => {
+    setCompleting(true);
+    setError('');
+    try {
+      await shootPlanService.patch(plan.id, { status: 'SHOOT_COMPLETED' });
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err, 'Could not mark this shoot as completed.'));
+    } finally {
+      setCompleting(false);
+    }
   };
 
   const handleUpdate = async (id) => {
@@ -89,6 +103,30 @@ export default function StepFeedback({ plan, onChanged }) {
         </button>
         {justSavedNew && <span style={{ fontSize: 12, fontWeight: 600, color: '#1fac71' }}>✓ Saved</span>}
       </div>
+
+      {isElevated && plan?.status === 'APPROVED' && (
+        <div style={{ marginBottom: 24 }}>
+          <button
+            type="button"
+            className="rr-toggle-btn rr-toggle-btn--active"
+            disabled={completing || entries.length === 0}
+            title={entries.length === 0 ? 'Enter and save feedback before marking the shoot completed.' : undefined}
+            onClick={handleMarkCompleted}
+          >
+            {completing ? 'Marking completed…' : 'Mark Shoot Completed'}
+          </button>
+          {entries.length === 0 && (
+            <div style={{ fontSize: 12.5, color: 'rgba(0,0,0,.5)', marginTop: 6 }}>
+              Save at least one piece of feedback to unlock this.
+            </div>
+          )}
+        </div>
+      )}
+      {plan?.status === 'SHOOT_COMPLETED' && (
+        <div style={{ fontSize: 12.5, color: '#1fac71', fontWeight: 600, marginBottom: 24 }}>
+          ✓ Shoot marked completed
+        </div>
+      )}
 
       {entries.length === 0 ? (
         <div className="rr-wiz-empty">

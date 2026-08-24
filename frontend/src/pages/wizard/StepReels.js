@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import RepeatingCard from '../../components/RepeatingCard';
 import PhotoUploadGrid from '../../components/PhotoUploadGrid';
 import { ErrorAlert } from '../../components/EmptyState';
+import ApprovalPanel from '../../components/ApprovalPanel';
+import { useToast } from '../../context/ToastContext';
 import {
   reelService,
   reelPhotoService,
@@ -304,12 +306,13 @@ function ModelCard({ model, onPatch, onUploadRef, onRemoveRefPhoto, onUploadCost
   );
 }
 
-export default function StepReels({ plan, onChanged }) {
+export default function StepReels({ plan, onChanged, isElevated }) {
   const [error, setError] = useState('');
   const [directoryModels, setDirectoryModels] = useState([]);
   const [modelPickerFor, setModelPickerFor] = useState(null);
   const [modelQuery, setModelQuery] = useState('');
   const [confirmTarget, setConfirmTarget] = useState(null);
+  const { showToast } = useToast();
   const reels = plan?.reels || [];
   const modelPool = plan?.plan_models || [];
   const locationPool = plan?.plan_locations || [];
@@ -319,10 +322,11 @@ export default function StepReels({ plan, onChanged }) {
     modelService.list({ status: 'Active' }).then((data) => setDirectoryModels(Array.isArray(data) ? data : data.results || []));
   }, []);
 
-  const run = async (fn, message) => {
+  const run = async (fn, message, successMessage) => {
     try {
       await fn();
       onChanged();
+      if (successMessage) showToast(successMessage);
     } catch (err) {
       setError(extractApiError(err, message));
     }
@@ -335,6 +339,20 @@ export default function StepReels({ plan, onChanged }) {
     );
   const patch = (id, payload) => run(() => reelService.patch(id, payload), 'Could not save changes.');
   const remove = (id) => run(() => reelService.remove(id), 'Could not remove reel.');
+  const submitReel = (id, wasReturned) =>
+    run(
+      () => reelService.submit(id),
+      'Could not submit this reel for approval.',
+      wasReturned ? 'Reel resubmitted successfully for approval.' : 'Reel submitted successfully for approval.'
+    );
+  const approveReel = (id) =>
+    run(() => reelService.approve(id), 'Could not approve this reel.', 'Reel approved successfully.');
+  const returnReel = (id, suggestions) =>
+    run(
+      () => reelService.returnForChanges(id, suggestions),
+      'Could not return this reel for changes.',
+      'Reel returned for changes.'
+    );
   const move = (id, dir) => {
     const idx = reels.findIndex((r) => r.id === id);
     const swapWith = reels[idx + dir];
@@ -471,7 +489,7 @@ export default function StepReels({ plan, onChanged }) {
             key={r.id}
             title={`Reel ${idx + 1}${r.title ? ` — ${r.title}` : ''}`}
             complete={!!(r.title && r.concept)}
-            summary={`${r.title || 'Untitled'} · ${r.status_display}`}
+            summary={`${r.title || 'Untitled'} · ${r.status_display} · ${r.approval_status_display || 'Draft'}`}
             isFirst={idx === 0}
             isLast={idx === reels.length - 1}
             onMoveUp={() => move(r.id, -1)}
@@ -479,6 +497,14 @@ export default function StepReels({ plan, onChanged }) {
             onDuplicate={() => duplicate(r)}
             onRemove={() => remove(r.id)}
           >
+            <ApprovalPanel
+              entity={r}
+              entityLabel="Reel"
+              isElevated={isElevated}
+              onSubmit={() => submitReel(r.id, r.approval_status === 'RETURNED_FOR_CHANGES')}
+              onApprove={() => approveReel(r.id)}
+              onReturn={(suggestions) => returnReel(r.id, suggestions)}
+            />
             <div className="rr-wizfield">
               <label>
                 Reel title <span className="rr-wiz-required">*</span>

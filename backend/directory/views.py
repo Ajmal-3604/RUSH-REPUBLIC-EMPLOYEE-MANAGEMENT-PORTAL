@@ -1,7 +1,7 @@
 from django.db.models import Q
 from rest_framework import viewsets
 
-from users.permissions import IsAdminOrReadOnly
+from users.permissions import IsAuthenticatedFullAccess
 
 from .models import Brand, Freelancer, ModelProfile, TeamMember
 from .serializers import BrandSerializer, FreelancerSerializer, ModelProfileSerializer, TeamMemberSerializer
@@ -20,7 +20,7 @@ class TeamMemberViewSet(viewsets.ModelViewSet):
     """/api/team/ -- internal Rush Republic staff directory."""
 
     serializer_class = TeamMemberSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticatedFullAccess]
 
     def get_queryset(self):
         qs = TeamMember.objects.all()
@@ -43,7 +43,7 @@ class FreelancerViewSet(viewsets.ModelViewSet):
     """/api/freelancers/ -- external photographers/videographers available for shoots."""
 
     serializer_class = FreelancerSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticatedFullAccess]
 
     def get_queryset(self):
         qs = Freelancer.objects.all()
@@ -66,7 +66,7 @@ class ModelProfileViewSet(viewsets.ModelViewSet):
     """/api/models/ -- master directory of talent available for shoots."""
 
     serializer_class = ModelProfileSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticatedFullAccess]
 
     def get_queryset(self):
         qs = ModelProfile.objects.all()
@@ -87,7 +87,7 @@ class BrandViewSet(viewsets.ModelViewSet):
     """/api/brands/ -- client brands and their assigned Rush Republic team."""
 
     serializer_class = BrandSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticatedFullAccess]
 
     def get_queryset(self):
         qs = Brand.objects.select_related(

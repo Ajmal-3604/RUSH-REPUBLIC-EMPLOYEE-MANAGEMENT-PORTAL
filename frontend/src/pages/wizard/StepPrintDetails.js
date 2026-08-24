@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { PrintShootDetailsFull, PrintReelsFull, PrintPhotosFull } from './PrintDetailsSections';
+import { PrintShootDetailsFull, PrintReelsFull, PrintPhotosFull, PrintStoryboardPage } from './PrintDetailsSections';
 import { PrintBrandHeader } from './PrintableSections';
 import { printWithBranding } from '../../utils/printUtils';
 
@@ -37,6 +37,7 @@ export default function StepPrintDetails({ plan }) {
         <PrintShootDetailsFull plan={plan} />
         <PrintReelsFull plan={plan} />
         <PrintPhotosFull plan={plan} />
+        <PrintStoryboardPage plan={plan} />
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }} className="rr-print-hide">

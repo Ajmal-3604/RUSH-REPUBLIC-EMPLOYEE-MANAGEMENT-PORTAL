@@ -400,4 +400,48 @@
     font-weight: 700;
     letter-spacing: .08em;
   }
+
+  /* Storyboard appendix: forced onto its own page(s) strictly after every
+     existing page. Every frame gets `break-before: page` -- including the
+     first, which starts the appendix cleanly right after the last existing
+     page without ever producing a genuine extra blank page -- and
+     `break-inside: avoid` so a single 9:16 frame can never be split across
+     two pages. */
+  .rr-print-storyboard {
+    display: block !important;
+  }
+
+  .rr-print-storyboard__page {
+    break-before: page;
+    page-break-before: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 90vh;
+  }
+
+  .rr-print-storyboard__label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: rgba(0, 0, 0, .5);
+    margin-bottom: 12px;
+  }
+
+  .rr-print-storyboard__img {
+    /* object-fit: contain (never cover/stretch) preserves the original
+       9:16 ratio exactly -- the image is scaled down to fit, never cropped
+       or distorted, with margin left on every side of the page. */
+    max-width: 88%;
+    max-height: 240mm;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: 1px solid rgba(0, 0, 0, .1);
+    border-radius: 4px;
+  }
 }

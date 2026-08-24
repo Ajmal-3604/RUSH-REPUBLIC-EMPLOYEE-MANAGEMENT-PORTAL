@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatDate, formatTime } from '../../utils/format';
-import { NoteBlock } from './PrintableSections';
+import { NoteBlock, APPROVAL_BADGE_COLORS } from './PrintableSections';
 
 /**
  * Complete, nothing-omitted print renderers for Shoot Details / Reels /
@@ -313,7 +313,21 @@ export function PrintReelsFull({ plan }) {
         const storyboard = (r.photos || []).filter((p) => p.category === 'STORYBOARD');
         return (
           <div key={r.id} className="rr-review-item" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-            <div className="rr-review-item__title">Reel {idx + 1} — {r.title || 'Untitled'}</div>
+            <div className="rr-review-item__title">
+              Reel {idx + 1} — {r.title || 'Untitled'}{' '}
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 10,
+                  textTransform: 'uppercase',
+                  ...(APPROVAL_BADGE_COLORS[r.approval_status] || APPROVAL_BADGE_COLORS.DRAFT),
+                }}
+              >
+                {r.approval_status_display || 'Draft'}
+              </span>
+            </div>
             <div className="rr-review-fields">
               <div>
                 <span className="field-label">Reference link</span>
@@ -352,7 +366,21 @@ export function PrintPhotosFull({ plan }) {
         const moodboard = (p.photos || []).filter((ph) => ph.category === 'MOODBOARD');
         return (
           <div key={p.id} className="rr-review-item" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-            <div className="rr-review-item__title">Shot {idx + 1} — {p.description || p.title || 'Untitled'}</div>
+            <div className="rr-review-item__title">
+              Shot {idx + 1} — {p.description || p.title || 'Untitled'}{' '}
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 10,
+                  textTransform: 'uppercase',
+                  ...(APPROVAL_BADGE_COLORS[p.approval_status] || APPROVAL_BADGE_COLORS.DRAFT),
+                }}
+              >
+                {p.approval_status_display || 'Draft'}
+              </span>
+            </div>
             <div className="rr-review-fields">
               <div>
                 <span className="field-label">Number of Photos</span>
@@ -379,6 +407,39 @@ export function PrintPhotosFull({ plan }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// Reuses the exact same storyboard images already shown inline (small,
+// thumbnail-sized) inside PrintReelsFull -- no separate/duplicate data
+// source. Invisible on screen and in the normal print flow; only appears
+// when @media print forces it onto its own page(s) at the very end of the
+// document (see .rr-print-storyboard rules in WizardShell.css), so it can
+// never land in the middle of the existing pages.
+export function PrintStoryboardPage({ plan }) {
+  const reels = plan?.reels || [];
+  const frames = reels.flatMap((r) =>
+    (r.photos || [])
+      .filter((ph) => ph.category === 'STORYBOARD')
+      .map((img) => ({ ...img, reelTitle: r.title }))
+  );
+  const showReelTitle = reels.length > 1;
+
+  if (frames.length === 0) return null;
+
+  return (
+    <div className="rr-print-storyboard">
+      {frames.map((img, idx) => (
+        <div className="rr-print-storyboard__page" key={img.id}>
+          <div className="rr-print-storyboard__label">
+            Storyboard
+            {showReelTitle && img.reelTitle ? ` — ${img.reelTitle}` : ''}
+            {frames.length > 1 ? ` (${idx + 1} of ${frames.length})` : ''}
+          </div>
+          <img className="rr-print-storyboard__img" src={img.image} alt="" />
+        </div>
+      ))}
     </div>
   );
 }

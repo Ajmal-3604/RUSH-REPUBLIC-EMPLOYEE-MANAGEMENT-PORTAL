@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import RepeatingCard from '../../components/RepeatingCard';
 import PhotoUploadGrid from '../../components/PhotoUploadGrid';
 import { ErrorAlert } from '../../components/EmptyState';
+import ApprovalPanel from '../../components/ApprovalPanel';
+import { useToast } from '../../context/ToastContext';
 import {
   photoService,
   photoBriefImageService,
@@ -352,12 +354,13 @@ function ModelCard({ model, onPatch, onUploadRef, onRemoveRefPhoto, onUploadCost
   );
 }
 
-export default function StepPhotos({ plan, onChanged }) {
+export default function StepPhotos({ plan, onChanged, isElevated }) {
   const [error, setError] = useState('');
   const [directoryModels, setDirectoryModels] = useState([]);
   const [modelPickerFor, setModelPickerFor] = useState(null);
   const [modelQuery, setModelQuery] = useState('');
   const [confirmTarget, setConfirmTarget] = useState(null);
+  const { showToast } = useToast();
   const briefs = plan?.photos || [];
   const modelPool = plan?.plan_models || [];
   const locationPool = plan?.plan_locations || [];
@@ -367,10 +370,11 @@ export default function StepPhotos({ plan, onChanged }) {
     modelService.list({ status: 'Active' }).then((data) => setDirectoryModels(Array.isArray(data) ? data : data.results || []));
   }, []);
 
-  const run = async (fn, message) => {
+  const run = async (fn, message, successMessage) => {
     try {
       await fn();
       onChanged();
+      if (successMessage) showToast(successMessage);
     } catch (err) {
       setError(extractApiError(err, message));
     }
@@ -389,6 +393,20 @@ export default function StepPhotos({ plan, onChanged }) {
   const removeReferenceLink = (linkId) =>
     run(() => photoReferenceLinkService.remove(linkId), 'Could not remove reference link.');
   const remove = (id) => run(() => photoService.remove(id), 'Could not remove shot.');
+  const submitShot = (id, wasReturned) =>
+    run(
+      () => photoService.submit(id),
+      'Could not submit this shot for approval.',
+      wasReturned ? 'Shot resubmitted successfully for approval.' : 'Shot submitted successfully for approval.'
+    );
+  const approveShot = (id) =>
+    run(() => photoService.approve(id), 'Could not approve this shot.', 'Shot approved successfully.');
+  const returnShot = (id, suggestions) =>
+    run(
+      () => photoService.returnForChanges(id, suggestions),
+      'Could not return this shot for changes.',
+      'Shot returned for changes.'
+    );
   const move = (id, dir) => {
     const idx = briefs.findIndex((p) => p.id === id);
     const swapWith = briefs[idx + dir];
@@ -519,7 +537,7 @@ export default function StepPhotos({ plan, onChanged }) {
             key={p.id}
             title={`Shot ${idx + 1}${p.title ? ` — ${p.title}` : ''}`}
             complete={!!p.description}
-            summary={p.description || p.title || 'Untitled'}
+            summary={`${p.description || p.title || 'Untitled'} · ${p.approval_status_display || 'Draft'}`}
             isFirst={idx === 0}
             isLast={idx === briefs.length - 1}
             onMoveUp={() => move(p.id, -1)}
@@ -527,6 +545,14 @@ export default function StepPhotos({ plan, onChanged }) {
             onDuplicate={() => duplicate(p)}
             onRemove={() => remove(p.id)}
           >
+            <ApprovalPanel
+              entity={p}
+              entityLabel="Shot"
+              isElevated={isElevated}
+              onSubmit={() => submitShot(p.id, p.approval_status === 'RETURNED_FOR_CHANGES')}
+              onApprove={() => approveShot(p.id)}
+              onReturn={(suggestions) => returnShot(p.id, suggestions)}
+            />
             <div className="rr-wizfield">
               <label>
                 Shot description <span className="rr-wiz-required">*</span>

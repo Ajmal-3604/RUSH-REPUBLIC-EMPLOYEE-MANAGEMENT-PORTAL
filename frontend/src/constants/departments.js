@@ -85,7 +85,6 @@ export const SHOOT_PLAN_STATUS = [
   { value: 'PRODUCTION_REVIEW', label: 'Production Review' },
   { value: 'ON_HOLD', label: 'On Hold' },
   { value: 'RETURNED_FOR_CHANGES', label: 'Returned for Changes' },
-  { value: 'CREATIVE_REVIEW', label: 'Creative Review' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'SHOOT_COMPLETED', label: 'Shoot Completed' },
   { value: 'ARCHIVED', label: 'Archived' },

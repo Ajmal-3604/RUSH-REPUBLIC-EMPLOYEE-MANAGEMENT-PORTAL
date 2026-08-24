@@ -100,8 +100,20 @@ export const shootPlanService = {
   summary: (params) => api.get(`/shoot-plans/summary/${query(params)}`).then((r) => r.data),
 };
 
-export const reelService = crud('reels');
-export const photoService = crud('photos');
+export const reelService = {
+  ...crud('reels'),
+  submit: (id) => api.post(`/reels/${id}/submit/`).then((r) => r.data),
+  approve: (id) => api.post(`/reels/${id}/approve/`).then((r) => r.data),
+  returnForChanges: (id, suggestions) =>
+    api.post(`/reels/${id}/return/`, { suggestions }).then((r) => r.data),
+};
+export const photoService = {
+  ...crud('photos'),
+  submit: (id) => api.post(`/photos/${id}/submit/`).then((r) => r.data),
+  approve: (id) => api.post(`/photos/${id}/approve/`).then((r) => r.data),
+  returnForChanges: (id, suggestions) =>
+    api.post(`/photos/${id}/return/`, { suggestions }).then((r) => r.data),
+};
 export const photoReferenceLinkService = crud('photo-reference-links');
 export const crewService = crud('crew');
 export const budgetService = crud('budget-items');

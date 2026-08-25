@@ -1,0 +1,45 @@
+# ---------------------------------------------------------------------------
+# Environment / secrets -- never commit real values, only *.env.example
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!*/.env.example
+
+# ---------------------------------------------------------------------------
+# Frontend (React / Create React App)
+# ---------------------------------------------------------------------------
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/coverage/
+frontend/.cache/
+frontend/npm-debug.log*
+
+# ---------------------------------------------------------------------------
+# Backend (Django / Python)
+# ---------------------------------------------------------------------------
+backend/venv/
+backend/env/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+backend/staticfiles/
+backend/.mypy_cache/
+backend/.pytest_cache/
+
+# User-uploaded media -- runtime content, not source. Keep the folder itself
+# (via media/.gitkeep) so MEDIA_ROOT exists on a fresh checkout, ignore what's
+# uploaded into it.
+backend/media/*
+!backend/media/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Editor / OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

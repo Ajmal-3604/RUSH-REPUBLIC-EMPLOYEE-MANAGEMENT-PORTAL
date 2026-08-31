@@ -112,6 +112,15 @@ class ShootPlanViewSet(DepartmentScopedViewSet):
                 'crew', 'travel_expenses',
                 Prefetch('feedback', queryset=Feedback.objects.select_related('author', 'shoot_plan')),
             )
+        else:
+            # list/create -- completion_percent needs each reel's/photo's own
+            # required fields (not just a count), so prefetch them here too,
+            # kept cheap with .only() since nothing else on the list payload
+            # needs the rest of their fields.
+            queryset = queryset.prefetch_related(
+                Prefetch('reels', queryset=Reel.objects.only('id', 'shoot_plan_id', 'title', 'concept')),
+                Prefetch('photos', queryset=Photo.objects.only('id', 'shoot_plan_id', 'description')),
+            )
 
         queryset = self.scope_queryset(queryset)
 
@@ -127,7 +136,11 @@ class ShootPlanViewSet(DepartmentScopedViewSet):
                 | Q(location__icontains=search)
             )
 
-        return queryset
+        # The Count(...) annotations above make Django silently drop the
+        # model's default ordering (Meta.ordering doesn't survive a GROUP BY
+        # query), so it has to be reapplied explicitly here or rows come
+        # back in undefined/insertion order instead of newest-first.
+        return queryset.order_by('-shoot_date', '-created_at')
 
     @action(detail=False, methods=['get'])
     def summary(self, request):

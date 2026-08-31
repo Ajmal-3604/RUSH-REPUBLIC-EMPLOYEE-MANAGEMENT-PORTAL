@@ -50,6 +50,13 @@ function stepComplete(key, plan) {
       return (plan.crew || []).length > 0;
     case 'budget':
       return (plan.budget_items || []).length > 0 || (plan.travel_expenses || []).length > 0;
+    case 'review':
+      // Matches StepReview.js's own "Step 2: Production Head Approval" done
+      // state -- the sidebar checkmark and the Approval Workflow section
+      // agree on what "Review & Approval complete" means.
+      return ['APPROVED', 'SHOOT_COMPLETED', 'ARCHIVED'].includes(plan.status);
+    case 'print':
+      return !!plan.print_previewed_at;
     case 'feedback':
       return (plan.feedback || []).length > 0;
     default:
@@ -181,18 +188,23 @@ export default function ShootPlanWizard({ create = false }) {
     []
   );
 
-  const progressPercent = useMemo(() => {
-    if (!plan) return 0;
-    // Review and Feedback are meta-steps, not planning deliverables -- they
-    // don't count toward "how much of this plan is filled out".
-    const done = trackedSteps.filter((s) => stepComplete(s.key, plan)).length;
-    return Math.round((done / trackedSteps.length) * 100);
-  }, [plan, trackedSteps]);
+  // Single source of truth: the same field-level ratio the backend computes
+  // for the Shoot Plans list cards (real required-fields-completed / total,
+  // across every Reel/Shot -- not "does at least one reel exist"). Reusing
+  // it here instead of a separate frontend calculation is what keeps the
+  // sidebar ring, the "at a glance" panel, and the dashboard cards from
+  // ever disagreeing with each other.
+  const progressPercent = plan?.completion_percent ?? 0;
 
   const attentionCount = useMemo(() => {
     if (!plan) return 0;
     return trackedSteps.filter((s) => !stepComplete(s.key, plan)).length;
   }, [plan, trackedSteps]);
+
+  // Whichever step comes after the one currently open, in the fixed 1-8
+  // order -- undefined on the last step (Feedback), which is exactly when
+  // no "Next" button should render.
+  const nextStep = WIZARD_STEPS[WIZARD_STEPS.findIndex((s) => s.key === activeStep) + 1];
 
   if (create) {
     return (
@@ -243,16 +255,6 @@ export default function ShootPlanWizard({ create = false }) {
             {meta.icon} {meta.label}
           </span>
           <div className="rr-wiz__spacer" />
-          <span className="rr-wiz__savetext">{saving ? 'Saving…' : lastSaved ? `Saved · ${formatClock(lastSaved)}` : ''}</span>
-          <button type="button" className="rr-wiz__btn" disabled={saving} onClick={handleSaveDraft}>
-            Save Draft
-          </button>
-          <button type="button" className="rr-wiz__btn" onClick={() => setActiveStep('review')}>
-            Preview
-          </button>
-          <button type="button" className="rr-wiz__btn rr-wiz__btn--dark" onClick={() => setActiveStep('review')}>
-            Submit
-          </button>
         </div>
 
         <div className="rr-wiz__pills">
@@ -308,8 +310,22 @@ export default function ShootPlanWizard({ create = false }) {
             {activeStep === 'review' && (
               <StepReview {...stepProps} goToStep={setActiveStep} isElevated={isElevated} onDeletePlan={handleDeletePlan} />
             )}
-            {activeStep === 'print' && <StepPrintDetails plan={plan} goToStep={setActiveStep} />}
+            {activeStep === 'print' && <StepPrintDetails plan={plan} goToStep={setActiveStep} onChanged={load} />}
             {activeStep === 'feedback' && <StepFeedback {...stepProps} isElevated={isElevated} />}
+
+            <div className="rr-wiz__next rr-print-hide">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="rr-wiz__savetext">{saving ? 'Saving…' : lastSaved ? `Saved · ${formatClock(lastSaved)}` : ''}</span>
+                <button type="button" className="rr-wiz__btn" disabled={saving} onClick={handleSaveDraft}>
+                  Save Draft
+                </button>
+              </div>
+              {nextStep && (
+                <button type="button" className="rr-toggle-btn rr-toggle-btn--active" onClick={() => setActiveStep(nextStep.key)}>
+                  Next → {nextStep.label}
+                </button>
+              )}
+            </div>
           </div>
 
           {activeStep === 'details' && (

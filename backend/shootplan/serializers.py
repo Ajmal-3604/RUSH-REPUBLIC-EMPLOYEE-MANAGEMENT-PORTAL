@@ -159,6 +159,7 @@ class ReelSerializer(ShootPlanChildSerializer):
     approval_history = serializers.SerializerMethodField()
     photos = ReelPhotoSerializer(many=True, read_only=True, source='photos_gallery')
     assigned_model_names = serializers.SerializerMethodField()
+    assigned_freelancer_names = serializers.SerializerMethodField()
     assigned_location_names = serializers.SerializerMethodField()
     assigned_prop_names = serializers.SerializerMethodField()
 
@@ -177,6 +178,7 @@ class ReelSerializer(ShootPlanChildSerializer):
             'returned_by', 'returned_by_name', 'returned_at',
             'approval_history',
             'assigned_models', 'assigned_model_names',
+            'assigned_freelancers', 'assigned_freelancer_names',
             'assigned_locations', 'assigned_location_names',
             'assigned_props', 'assigned_prop_names',
             'photos', 'department', 'created_at', 'updated_at',
@@ -192,6 +194,9 @@ class ReelSerializer(ShootPlanChildSerializer):
 
     def get_assigned_model_names(self, obj):
         return [m.name for m in obj.assigned_models.all()]
+
+    def get_assigned_freelancer_names(self, obj):
+        return [f.name for f in obj.assigned_freelancers.all()]
 
     def get_assigned_location_names(self, obj):
         return [l.name for l in obj.assigned_locations.all()]
@@ -229,6 +234,7 @@ class PhotoSerializer(ShootPlanChildSerializer):
     photos = PhotoBriefImageSerializer(many=True, read_only=True, source='photos_gallery')
     reference_links = PhotoReferenceLinkSerializer(many=True, read_only=True)
     assigned_model_names = serializers.SerializerMethodField()
+    assigned_freelancer_names = serializers.SerializerMethodField()
     assigned_location_names = serializers.SerializerMethodField()
     assigned_prop_names = serializers.SerializerMethodField()
 
@@ -247,6 +253,7 @@ class PhotoSerializer(ShootPlanChildSerializer):
             'returned_by', 'returned_by_name', 'returned_at',
             'approval_history',
             'assigned_models', 'assigned_model_names',
+            'assigned_freelancers', 'assigned_freelancer_names',
             'assigned_locations', 'assigned_location_names',
             'assigned_props', 'assigned_prop_names',
             'photos', 'department', 'created_at', 'updated_at',
@@ -259,6 +266,9 @@ class PhotoSerializer(ShootPlanChildSerializer):
 
     def get_assigned_model_names(self, obj):
         return [m.name for m in obj.assigned_models.all()]
+
+    def get_assigned_freelancer_names(self, obj):
+        return [f.name for f in obj.assigned_freelancers.all()]
 
     def get_assigned_location_names(self, obj):
         return [l.name for l in obj.assigned_locations.all()]
@@ -461,12 +471,6 @@ STATUS_TRANSITION_TITLES = {
     ('APPROVED', 'SHOOT_COMPLETED'): 'Shoot marked completed',
     ('SHOOT_COMPLETED', 'ARCHIVED'): 'Shoot plan archived',
 }
-STATUS_TRANSITION_RECIPIENTS = {
-    'PRODUCTION_REVIEW': 'Production Head',
-    'APPROVED': 'Client Servicing',
-}
-
-
 def _log_status_transition(shoot_plan, old_status, new_status, actor):
     if old_status == new_status:
         return
@@ -479,9 +483,6 @@ def _log_status_transition(shoot_plan, old_status, new_status, actor):
             (old_status, new_status), f'Status changed to {shoot_plan.get_status_display()}'
         )
     ActivityLog.objects.create(shoot_plan=shoot_plan, title=title, actor=actor)
-    recipient = STATUS_TRANSITION_RECIPIENTS.get(new_status)
-    if recipient:
-        ActivityLog.objects.create(shoot_plan=shoot_plan, title=f'Notification sent to {recipient}', actor=None)
 
 
 class ShootPlanListSerializer(serializers.ModelSerializer):
@@ -542,27 +543,63 @@ class ShootPlanListSerializer(serializers.ModelSerializer):
 
     def get_completion_percent(self, obj):
         """
-        Derived from real progress instead of a stored value nothing ever
-        updates -- mirrors the frontend wizard's own step-complete checks
-        (ShootPlanWizard.js's stepComplete()) so the percentage shown on the
-        Shoot Plans list always matches the sidebar checkmarks in the wizard.
-        Uses the queryset's annotated *_count fields when available (list view,
-        zero extra queries); falls back to a real count otherwise (e.g. the
-        single instance returned right after create()).
+        Real (completed required fields / total required fields) x 100 --
+        NOT "does at least one reel/photo/etc exist". A plan with one mostly-
+        empty reel must not score the same as one with a fully-briefed reel;
+        a plan with 3 reels where only 1 is finished must not read as "done"
+        just because `reels.exists()` is True.
+
+        Required fields, matching exactly what the wizard itself marks
+        required (the `*` markers in StepShootDetails.js/StepReels.js/
+        StepPhotos.js) -- nothing here is invented:
+          - Shoot Details: title, shoot_date, brand            (3 fixed slots)
+          - Each Reel:      title, concept ("Script")           (2 slots/reel)
+          - Each Photo:     description ("Shot description")    (1 slot/shot)
+          - Crew / Budget / Feedback: no per-field requirement in the UI --
+            kept as a single "at least one record exists" slot each, same as
+            before, since there's no finer-grained required field to check.
+        A plan with zero reels (or zero photos) still contributes that
+        section's slots as incomplete rather than dropping out of the
+        denominator entirely -- otherwise a plan that never gets any reels
+        could reach 100% without ever being briefed, which defeats the point.
         """
         def count(field):
             annotated = getattr(obj, f'{field}_count', None)
             return annotated if annotated is not None else getattr(obj, field).count()
 
-        steps_done = sum([
-            bool(obj.title and obj.shoot_date),
-            count('reels') > 0,
-            count('photos') > 0,
-            count('crew') > 0,
-            count('budget_items') > 0 or count('travel_expenses') > 0,
-            count('feedback') > 0,
-        ])
-        return round(steps_done / 6 * 100)
+        def filled(value):
+            return bool(value and str(value).strip())
+
+        completed = 0
+        total = 0
+
+        # Shoot Details
+        for value in (obj.title, obj.shoot_date, obj.brand_id):
+            total += 1
+            completed += filled(value)
+
+        # Reels -- every existing reel's required fields, or one empty
+        # "virtual" reel's worth of slots if none exist yet.
+        reels = list(obj.reels.all())
+        for reel in (reels or [None]):
+            total += 2
+            if reel is not None:
+                completed += filled(reel.title) + filled(reel.concept)
+
+        # Photos/Shots -- same pattern, one required field each.
+        photos = list(obj.photos.all())
+        for photo in (photos or [None]):
+            total += 1
+            if photo is not None:
+                completed += filled(photo.description)
+
+        # Crew / Budget / Feedback -- "at least one record" slots.
+        total += 3
+        completed += count('crew') > 0
+        completed += (count('budget_items') > 0 or count('travel_expenses') > 0)
+        completed += count('feedback') > 0
+
+        return round(completed / total * 100) if total else 0
 
     def validate_department(self, value):
         """
@@ -643,7 +680,7 @@ class ShootPlanDetailSerializer(ShootPlanListSerializer):
 
     class Meta(ShootPlanListSerializer.Meta):
         fields = ShootPlanListSerializer.Meta.fields + [
-            'client_notified', 'models_notified', 'locations_notified',
+            'client_notified', 'models_notified', 'locations_notified', 'print_previewed_at',
             'plan_models', 'plan_locations', 'props',
             'reels', 'photos', 'crew', 'budget_items', 'travel_expenses', 'reviews', 'activity_log', 'feedback',
         ]

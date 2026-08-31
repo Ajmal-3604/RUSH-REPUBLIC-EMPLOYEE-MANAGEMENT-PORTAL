@@ -172,6 +172,20 @@
   min-width: 0;
 }
 
+/* "Next" step navigation -- always the last thing in the content column,
+   below whatever the active step itself renders (fields, its own Submit/
+   Approve/etc. buttons). */
+.rr-wiz__next {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, .08);
+}
+
 .rr-wiz__glance {
   width: 260px;
   background: #f7f7f5;

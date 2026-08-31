@@ -73,6 +73,10 @@ class ShootPlan(TimeStampedModel):
     # Step 2 / Step 3 approval-panel notification toggles.
     models_notified = models.BooleanField(default=False)
     locations_notified = models.BooleanField(default=False)
+    # Step 7 (Print Details) -- set the first time anyone clicks "Preview
+    # Printable Version" there, so the sidebar can show it as done. Shared
+    # across every viewer of the plan, same as every other step's checkmark.
+    print_previewed_at = models.DateTimeField(null=True, blank=True)
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -343,6 +347,7 @@ class Reel(ShootPlanChild):
     returned_at = models.DateTimeField(null=True, blank=True)
 
     assigned_models = models.ManyToManyField('PlanModel', blank=True, related_name='reels')
+    assigned_freelancers = models.ManyToManyField('CrewMember', blank=True, related_name='reels')
     assigned_locations = models.ManyToManyField('PlanLocation', blank=True, related_name='reels')
     assigned_props = models.ManyToManyField('Prop', blank=True, related_name='reels')
 
@@ -431,6 +436,7 @@ class Photo(ShootPlanChild):
     returned_at = models.DateTimeField(null=True, blank=True)
 
     assigned_models = models.ManyToManyField('PlanModel', blank=True, related_name='photo_briefs')
+    assigned_freelancers = models.ManyToManyField('CrewMember', blank=True, related_name='photo_briefs')
     assigned_locations = models.ManyToManyField('PlanLocation', blank=True, related_name='photo_briefs')
     assigned_props = models.ManyToManyField('Prop', blank=True, related_name='photo_briefs')
 

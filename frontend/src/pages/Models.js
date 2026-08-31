@@ -11,6 +11,8 @@ const EMPTY_FORM = {
   age: '',
   gender: 'FEMALE',
   height_cm: '',
+  weight_kg: '',
+  skin_tone: '',
   mobile: '',
   email: '',
   cost_per_day: '',
@@ -81,6 +83,8 @@ export default function Models() {
       age: row.age,
       gender: row.gender,
       height_cm: row.height_cm || '',
+      weight_kg: row.weight_kg || '',
+      skin_tone: row.skin_tone || '',
       mobile: row.mobile,
       email: row.email || '',
       cost_per_day: row.cost_per_day,
@@ -254,8 +258,14 @@ export default function Models() {
                 <div>
                   Gender <b>{md.gender_display}</b>
                 </div>
-                <div className="full">
+                <div>
                   Height <b>{md.height_cm ? `${md.height_cm} cm` : '—'}</b>
+                </div>
+                <div>
+                  Weight <b>{md.weight_kg ? `${md.weight_kg} kg` : '—'}</b>
+                </div>
+                <div className="full">
+                  Skin tone <b>{md.skin_tone || '—'}</b>
                 </div>
                 <div className="full">
                   Category <b>{(md.categories || []).join(', ') || '—'}</b>
@@ -334,8 +344,19 @@ export default function Models() {
           </div>
         </div>
 
-        <label>Height (cm)</label>
-        <input name="height_cm" type="number" value={form.height_cm} onChange={handleChange} />
+        <div className="rr-drawer__row">
+          <div>
+            <label>Height (cm)</label>
+            <input name="height_cm" type="number" value={form.height_cm} onChange={handleChange} />
+          </div>
+          <div>
+            <label>Weight (kg)</label>
+            <input name="weight_kg" type="number" value={form.weight_kg} onChange={handleChange} />
+          </div>
+        </div>
+
+        <label>Skin tone</label>
+        <input name="skin_tone" value={form.skin_tone} onChange={handleChange} placeholder="e.g. Fair, Wheatish, Dusky" />
 
         <label>
           Mobile <span className="rr-drawer__required">*</span>

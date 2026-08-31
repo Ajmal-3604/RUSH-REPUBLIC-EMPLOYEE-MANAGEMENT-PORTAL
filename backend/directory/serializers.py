@@ -65,7 +65,7 @@ class ModelProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModelProfile
         fields = [
-            'id', 'name', 'mobile', 'email', 'age', 'gender', 'gender_display', 'height_cm',
+            'id', 'name', 'mobile', 'email', 'age', 'gender', 'gender_display', 'height_cm', 'weight_kg', 'skin_tone',
             'categories', 'cost_per_day', 'notes', 'photo', 'is_active', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

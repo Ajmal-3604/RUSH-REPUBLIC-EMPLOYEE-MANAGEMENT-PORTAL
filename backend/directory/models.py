@@ -95,6 +95,8 @@ class ModelProfile(models.Model):
     age = models.PositiveSmallIntegerField(validators=[MinValueValidator(18), MaxValueValidator(80)])
     gender = models.CharField(max_length=10, choices=ModelGender.choices, default=ModelGender.OTHER)
     height_cm = models.PositiveSmallIntegerField(null=True, blank=True)
+    weight_kg = models.PositiveSmallIntegerField(null=True, blank=True)
+    skin_tone = models.CharField(max_length=50, blank=True)
     categories = models.JSONField(default=list, blank=True)
     cost_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     notes = models.TextField(blank=True)

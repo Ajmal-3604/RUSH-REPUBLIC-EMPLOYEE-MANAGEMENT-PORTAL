@@ -7,12 +7,25 @@
   border: 1px solid rgba(0, 0, 0, .2);
   background: #fff;
   color: #0e0e0e;
+  transition: transform 80ms ease, background-color 80ms ease;
+}
+
+/* Pressed feedback -- fires on mousedown, before the click handler even
+   runs, so the user sees the click register immediately regardless of how
+   long the action itself takes. */
+.rr-toggle-btn:active {
+  background: #ececea;
+  transform: scale(0.97);
 }
 
 .rr-toggle-btn--active {
   background: #0e0e0e;
   color: #fff;
   border-color: #0e0e0e;
+}
+
+.rr-toggle-btn--active:active {
+  background: #2b2b28;
 }
 
 .rr-status-select {

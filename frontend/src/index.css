@@ -36,13 +36,23 @@ textarea {
   box-sizing: border-box;
 }
 
-/* Hard stop on any stray horizontal scroll, at every breakpoint. */
+/* Hard stop on any stray horizontal scroll, at every breakpoint.
+   overflow-x is set on `body` only, not `html` -- when both html and body
+   have a non-`visible` overflow at once, the browser stops propagating
+   body's scrolling to the actual viewport (per the CSS overflow-propagation
+   spec) and both elements become their own separate nested scroll
+   containers instead. That silently breaks `position: sticky` for every
+   descendant in the app (this is what broke the Shoot Plan wizard's sticky
+   sidebar) without changing anything visible on its own. */
 html,
 body {
   margin: 0;
   padding: 0;
   width: 100%;
   max-width: 100%;
+}
+
+body {
   overflow-x: hidden;
 }
 
@@ -58,7 +68,11 @@ body {
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  /* No overflow-x here on purpose -- html/body above already enforce the
+     "no stray horizontal scroll" rule at the true page level, and setting
+     it again on #root turns #root into its own scroll container, which
+     silently breaks `position: sticky` for every descendant in the app
+     (this is what was breaking the Shoot Plan wizard's sticky sidebar). */
 }
 
 a {

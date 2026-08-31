@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { PrintShootDetailsFull, PrintReelsFull, PrintPhotosFull, PrintStoryboardPage } from './PrintDetailsSections';
 import { PrintBrandHeader } from './PrintableSections';
 import { printWithBranding } from '../../utils/printUtils';
+import { shootPlanService } from '../../api/services';
 
 /**
  * Complete, print-ready snapshot of Shoot Details / Reels / Photos -- reads
@@ -10,7 +11,7 @@ import { printWithBranding } from '../../utils/printUtils';
  * without a separate data source. Reuses Review & Approval's `rr-review-*`
  * styling and window.print() flow.
  */
-export default function StepPrintDetails({ plan }) {
+export default function StepPrintDetails({ plan, onChanged }) {
   const contentRef = useRef(null);
   const [preparing, setPreparing] = useState(false);
 
@@ -19,6 +20,13 @@ export default function StepPrintDetails({ plan }) {
     try {
       const title = plan?.title ? `${plan.title} — Print Details — Rush Republic` : 'Print Details — Rush Republic';
       await printWithBranding(title, contentRef.current);
+      // First preview marks this step done in the sidebar -- shared across
+      // every viewer of the plan, same as every other step's checkmark, not
+      // just remembered in this one browser.
+      if (plan?.id && !plan.print_previewed_at) {
+        await shootPlanService.patch(plan.id, { print_previewed_at: new Date().toISOString() });
+        onChanged?.();
+      }
     } finally {
       setPreparing(false);
     }

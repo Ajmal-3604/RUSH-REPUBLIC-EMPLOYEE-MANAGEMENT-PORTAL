@@ -387,9 +387,6 @@ export default function StepReview({ plan, onChanged, goToStep, isElevated, onDe
               Total crew <b>{crew.length}</b>
             </div>
             <div>
-              Unconfirmed <b>{crew.filter((c) => !c.call_time || !c.time_out).length}</b>
-            </div>
-            <div>
               Internal team <b>{crew.filter((c) => c.person_type === 'INTERNAL_TEAM').length}</b>
             </div>
             <div>
@@ -440,9 +437,6 @@ export default function StepReview({ plan, onChanged, goToStep, isElevated, onDe
         <button type="button" className="rr-toggle-btn" onClick={() => goToStep('details')}>
           Back to Edit
         </button>
-        <button type="button" className="rr-toggle-btn" onClick={onChanged}>
-          Save Draft
-        </button>
         <button
           type="button"
           className="rr-toggle-btn"
@@ -450,16 +444,6 @@ export default function StepReview({ plan, onChanged, goToStep, isElevated, onDe
         >
           Preview Printable Version
         </button>
-        {isElevated && (
-          <button
-            type="button"
-            className="rr-toggle-btn rr-toggle-btn--active"
-            disabled={busy || warnings.length > 0 || !['DRAFT', 'RETURNED_FOR_CHANGES'].includes(plan?.status)}
-            onClick={() => transition('PRODUCTION_REVIEW')}
-          >
-            Submit for Internal Approval
-          </button>
-        )}
       </div>
     </>
   );

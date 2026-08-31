@@ -6,10 +6,29 @@ import { CREW_ROLES } from '../../constants/departments';
 
 export default function StepCrew({ plan, onChanged }) {
   const [error, setError] = useState('');
-  const crew = plan?.crew || [];
+  // Manually-added people are tracked here (in add order) so they always
+  // render at the very bottom of the list, below every synced/existing
+  // member -- the default sort-by-type below would otherwise drop a new
+  // "New crew member" row wherever its (empty) call_time/name happens to
+  // fall inside its Internal Team group.
+  const [justAddedIds, setJustAddedIds] = useState([]);
   const planModels = plan?.plan_models || [];
   const reelsAndPhotos = [...(plan?.reels || []), ...(plan?.photos || [])];
   const assignedModelIds = new Set(reelsAndPhotos.flatMap((r) => r.assigned_models || []));
+
+  // Internal Team first, then Freelancers, then Models -- Agreed Time In/Out
+  // for both of those groups is always read from their Reels/Photos source
+  // below (PlanModel.time_in/time_out for models; the freelancer's own
+  // call_time/time_out, which Reels/Photos already patch directly), so this
+  // view never holds its own copy that could drift out of sync.
+  const PERSON_TYPE_ORDER = { INTERNAL_TEAM: 0, FREELANCER: 1, MODEL: 2 };
+  const allCrew = plan?.crew || [];
+  const crew = allCrew
+    .filter((c) => !justAddedIds.includes(c.id))
+    .sort((a, b) => (PERSON_TYPE_ORDER[a.person_type] ?? 3) - (PERSON_TYPE_ORDER[b.person_type] ?? 3));
+  const newlyAdded = justAddedIds
+    .map((id) => allCrew.find((c) => c.id === id))
+    .filter(Boolean);
 
   const run = async (fn, message) => {
     try {
@@ -21,13 +40,20 @@ export default function StepCrew({ plan, onChanged }) {
   };
 
   const patch = (id, payload) => run(() => crewService.patch(id, payload), 'Could not save changes.');
-  const remove = (id) => run(() => crewService.remove(id), 'Could not remove crew member.');
+  const remove = (id) => {
+    setJustAddedIds((ids) => ids.filter((i) => i !== id));
+    run(() => crewService.remove(id), 'Could not remove crew member.');
+  };
 
-  const addManual = () =>
-    run(
-      () => crewService.create({ shoot_plan: plan.id, name: 'New crew member', person_type: 'INTERNAL_TEAM', role: 'OTHER' }),
-      'Could not add crew member.'
-    );
+  const addManual = async () => {
+    try {
+      const created = await crewService.create({ shoot_plan: plan.id, name: 'New crew member', person_type: 'INTERNAL_TEAM', role: 'OTHER' });
+      setJustAddedIds((ids) => [...ids, created.id]);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err, 'Could not add crew member.'));
+    }
+  };
 
   const BRAND_ROLE_SYNC = [
     { key: 'brand_script_writer', role: 'SCRIPT_WRITER' },
@@ -99,9 +125,6 @@ export default function StepCrew({ plan, onChanged }) {
           <button type="button" className="rr-toggle-btn" onClick={syncFromModels}>
             ↻ Sync from shoot plan
           </button>
-          <button type="button" className="rr-toggle-btn rr-toggle-btn--active" onClick={addManual}>
-            + Add person
-          </button>
         </div>
       </div>
       <div style={{ fontSize: 13, color: 'rgba(0,0,0,.55)', marginBottom: 16 }}>
@@ -111,14 +134,31 @@ export default function StepCrew({ plan, onChanged }) {
 
       <ErrorAlert message={error} />
 
-      {crew.length === 0 && (
+      {crew.length === 0 && newlyAdded.length === 0 && (
         <div className="rr-wiz-empty">
           <div className="rr-wiz-empty__title">No crew yet</div>
           <div className="rr-wiz-empty__text">Sync from the shoot plan or add a person manually.</div>
         </div>
       )}
 
-      {crew.map((c) => (
+      {[...crew, ...newlyAdded].map((c) => {
+        // Models' Agreed Time In/Out lives on the linked PlanModel (edited
+        // from Reels/Photos); freelancers' already lives directly on this
+        // crew row, since Reels/Photos patch that same field. Either way,
+        // Shoot Crew only ever displays it -- never its own copy.
+        const linkedModel = c.person_type === 'MODEL' && c.source_plan_model
+          ? planModels.find((m) => m.id === c.source_plan_model)
+          : null;
+        const timeIn = linkedModel ? linkedModel.time_in : c.call_time;
+        const timeOut = linkedModel ? linkedModel.time_out : c.time_out;
+        // Only lock the fields when this row actually has a Reels/Photos
+        // source to read from -- a manually-added Freelancer/Model (no
+        // source_plan_model / source_freelancer) has nowhere to sync from,
+        // so it must stay editable like Internal Team's own timing would.
+        const hasSource = !!(linkedModel || c.source_freelancer);
+        const showTiming = c.person_type !== 'INTERNAL_TEAM';
+        const timingFromSource = showTiming && hasSource;
+        return (
         <div key={c.id} style={{ border: '1px solid rgba(0,0,0,.1)', borderRadius: 6, padding: 14, marginBottom: 10 }}>
           <div className="rr-wizgrid-3" style={{ marginBottom: 10 }}>
             <div className="rr-wizfield" style={{ marginBottom: 0 }}>
@@ -155,7 +195,20 @@ export default function StepCrew({ plan, onChanged }) {
             </div>
           </div>
 
-          {c.person_type !== 'INTERNAL_TEAM' && (
+          {timingFromSource && (
+            <div className="rr-wizgrid-2" style={{ marginBottom: 10 }}>
+              <div className="rr-wizfield" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: 11 }}>Agreed time in (from Reels/Photos)</label>
+                <input type="time" value={timeIn || ''} readOnly disabled style={{ padding: '7px 9px', fontSize: 13, background: '#f7f7f5', color: 'rgba(0,0,0,.65)' }} />
+              </div>
+              <div className="rr-wizfield" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: 11 }}>Agreed time out (from Reels/Photos)</label>
+                <input type="time" value={timeOut || ''} readOnly disabled style={{ padding: '7px 9px', fontSize: 13, background: '#f7f7f5', color: 'rgba(0,0,0,.65)' }} />
+              </div>
+            </div>
+          )}
+
+          {showTiming && !hasSource && (
             <div className="rr-wizgrid-2" style={{ marginBottom: 10 }}>
               <div className="rr-wizfield" style={{ marginBottom: 0 }}>
                 <label style={{ fontSize: 11 }}>Agreed time in</label>
@@ -178,7 +231,12 @@ export default function StepCrew({ plan, onChanged }) {
             </button>
           </div>
         </div>
-      ))}
+        );
+      })}
+
+      <button type="button" className="rr-toggle-btn rr-toggle-btn--active" onClick={addManual}>
+        + Add person
+      </button>
     </>
   );
 }

@@ -11,6 +11,8 @@ import {
   modelService,
   planModelService,
   planModelPhotoService,
+  freelancerService,
+  crewService,
   planLocationService,
   planLocationPhotoService,
   propService,
@@ -18,7 +20,7 @@ import {
   extractApiError,
 } from '../../api/services';
 import { money, clampNonNegative } from '../../utils/format';
-import { PERMIT_STATUS_OPTIONS, PROP_SOURCE_OPTIONS, PROP_STATUS_OPTIONS } from '../../constants/wizardOptions';
+import { PROP_SOURCE_OPTIONS, PROP_STATUS_OPTIONS } from '../../constants/wizardOptions';
 
 const PHOTO_BRIEF_CATEGORIES = [
   { value: 'MOODBOARD', label: 'Moodboard / shot references (9:16)', aspect: 'portrait', hint: 'Drag & drop portrait frames, or click to browse' },
@@ -187,16 +189,6 @@ function LocationCard({ location, onPatch, onUpload, onRemovePhoto, onRequestRem
           <input defaultValue={location.map_url} onBlur={(e) => onPatch({ map_url: e.target.value })} placeholder="https://maps.google.com/…" />
         </div>
         <div className="rr-wizfield">
-          <label>Permit status</label>
-          <select defaultValue={location.permit_status} onBlur={(e) => onPatch({ permit_status: e.target.value })}>
-            {PERMIT_STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="rr-wizfield">
           <label>On-site contact</label>
           <input defaultValue={location.contact_name} onBlur={(e) => onPatch({ contact_name: e.target.value })} placeholder="Name" />
         </div>
@@ -204,19 +196,6 @@ function LocationCard({ location, onPatch, onUpload, onRemovePhoto, onRequestRem
           <label>Contact phone</label>
           <input defaultValue={location.contact_phone} onBlur={(e) => onPatch({ contact_phone: e.target.value })} placeholder="98765 43210" />
         </div>
-      </div>
-
-      <div className="rr-wizfield">
-        <label>Access notes</label>
-        <textarea
-          ref={autoResize}
-          rows={2}
-          defaultValue={location.access_notes}
-          onInput={(e) => autoResize(e.target)}
-          onBlur={(e) => onPatch({ access_notes: e.target.value })}
-          placeholder="Parking, permits, timing restrictions…"
-          style={{ overflow: 'hidden', resize: 'none' }}
-        />
       </div>
 
       <PhotoUploadGrid
@@ -359,20 +338,35 @@ export default function StepPhotos({ plan, onChanged, isElevated }) {
   const [directoryModels, setDirectoryModels] = useState([]);
   const [modelPickerFor, setModelPickerFor] = useState(null);
   const [modelQuery, setModelQuery] = useState('');
+  const [directoryFreelancers, setDirectoryFreelancers] = useState([]);
+  const [freelancerPickerFor, setFreelancerPickerFor] = useState(null);
+  const [freelancerQuery, setFreelancerQuery] = useState('');
   const [confirmTarget, setConfirmTarget] = useState(null);
   const { showToast } = useToast();
   const briefs = plan?.photos || [];
   const modelPool = plan?.plan_models || [];
+  const freelancerPool = (plan?.crew || []).filter((c) => c.person_type === 'FREELANCER');
   const locationPool = plan?.plan_locations || [];
   const propPool = plan?.props || [];
+  // Only one Shot's form is shown at a time, picked from the "Select Shot"
+  // dropdown -- same pattern as StepReels.js's Reel selector, so the two
+  // sections feel consistent. Falls back to the first shot if nothing is
+  // selected yet, or if the previously-selected shot was just deleted.
+  // Review & Approval / Print Details are untouched by this and always read
+  // the full `plan.photos` array directly, so they still show every shot
+  // regardless of what's selected here.
+  const [selectedShotId, setSelectedShotId] = useState(null);
+  const selectedShot = briefs.find((p) => p.id === selectedShotId) || briefs[0] || null;
 
   useEffect(() => {
     modelService.list({ status: 'Active' }).then((data) => setDirectoryModels(Array.isArray(data) ? data : data.results || []));
+    freelancerService.list({ status: 'Active' }).then((data) => setDirectoryFreelancers(Array.isArray(data) ? data : data.results || []));
   }, []);
 
   const run = async (fn, message, successMessage) => {
     try {
       await fn();
+      setError('');
       onChanged();
       if (successMessage) showToast(successMessage);
     } catch (err) {
@@ -380,11 +374,15 @@ export default function StepPhotos({ plan, onChanged, isElevated }) {
     }
   };
 
-  const add = () =>
-    run(
-      () => photoService.create({ shoot_plan: plan.id, order: briefs.length }),
-      'Could not add shot.'
-    );
+  const add = async () => {
+    try {
+      const created = await photoService.create({ shoot_plan: plan.id, order: briefs.length });
+      onChanged();
+      setSelectedShotId(created.id);
+    } catch (err) {
+      setError(extractApiError(err, 'Could not add shot.'));
+    }
+  };
   const patch = (id, payload) => run(() => photoService.patch(id, payload), 'Could not save changes.');
   const addReferenceLink = (photoId, url) =>
     run(() => photoReferenceLinkService.create({ photo: photoId, url }), 'Could not add reference link.');
@@ -469,6 +467,34 @@ export default function StepPhotos({ plan, onChanged, isElevated }) {
       setError(extractApiError(err, 'Could not add model.'));
     }
   };
+
+  const closeFreelancerPicker = () => {
+    setFreelancerPickerFor(null);
+    setFreelancerQuery('');
+  };
+
+  const selectFreelancer = async (brief, dirFreelancer) => {
+    closeFreelancerPicker();
+    const existing = freelancerPool.find((f) => f.source_freelancer === dirFreelancer.id);
+    if (existing) {
+      assign(brief, 'assigned_freelancers', existing.id);
+      return;
+    }
+    try {
+      const created = await crewService.create({
+        shoot_plan: plan.id,
+        name: dirFreelancer.name,
+        contact: dirFreelancer.mobile,
+        person_type: 'FREELANCER',
+        source_freelancer: dirFreelancer.id,
+        role: 'OTHER',
+      });
+      await patch(brief.id, { assigned_freelancers: [...(brief.assigned_freelancers || []), created.id] });
+    } catch (err) {
+      setError(extractApiError(err, 'Could not add freelancer.'));
+    }
+  };
+
   const createLocationFor = (brief) =>
     run(async () => {
       const created = await planLocationService.create({
@@ -492,8 +518,10 @@ export default function StepPhotos({ plan, onChanged, isElevated }) {
   const patchLocation = (id, payload) => run(() => planLocationService.patch(id, payload), 'Could not save changes.');
   const patchProp = (id, payload) => run(() => propService.patch(id, payload), 'Could not save changes.');
   const patchModel = (id, payload) => run(() => planModelService.patch(id, payload), 'Could not save changes.');
+  const patchFreelancer = (id, payload) => run(() => crewService.patch(id, payload), 'Could not save changes.');
 
   const requestRemoveModel = (m) => setConfirmTarget({ kind: 'model', id: m.id, name: m.name });
+  const requestRemoveFreelancer = (f) => setConfirmTarget({ kind: 'freelancer', id: f.id, name: f.name });
   const requestRemoveLocation = (loc) => setConfirmTarget({ kind: 'location', id: loc.id, name: loc.name });
   const requestRemoveProp = (p) => setConfirmTarget({ kind: 'prop', id: p.id, name: p.name });
   const cancelConfirm = () => setConfirmTarget(null);
@@ -502,6 +530,7 @@ export default function StepPhotos({ plan, onChanged, isElevated }) {
     const { kind, id } = confirmTarget;
     setConfirmTarget(null);
     if (kind === 'model') run(() => planModelService.remove(id), 'Could not remove model.');
+    else if (kind === 'freelancer') run(() => crewService.remove(id), 'Could not remove freelancer.');
     else if (kind === 'location') run(() => planLocationService.remove(id), 'Could not remove location.');
     else run(() => propService.remove(id), 'Could not remove prop.');
   };
@@ -528,10 +557,26 @@ export default function StepPhotos({ plan, onChanged, isElevated }) {
         </div>
       )}
 
-      {briefs.map((p, idx) => {
+      {briefs.length > 0 && (
+        <div className="rr-wizfield" style={{ maxWidth: 320 }}>
+          <label>Select Shot</label>
+          <select value={selectedShot?.id || ''} onChange={(e) => setSelectedShotId(Number(e.target.value))}>
+            {briefs.map((p, idx) => (
+              <option key={p.id} value={p.id}>
+                Shot {idx + 1}
+                {p.title ? ` — ${p.title}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {(selectedShot ? [selectedShot] : []).map((p) => {
+        const idx = briefs.indexOf(p);
         const assignedLocations = locationPool.filter((l) => (p.assigned_locations || []).includes(l.id));
         const assignedProps = propPool.filter((pr) => (p.assigned_props || []).includes(pr.id));
         const assignedModels = modelPool.filter((m) => (p.assigned_models || []).includes(m.id));
+        const assignedFreelancers = freelancerPool.filter((f) => (p.assigned_freelancers || []).includes(f.id));
         return (
           <RepeatingCard
             key={p.id}
@@ -642,6 +687,27 @@ export default function StepPhotos({ plan, onChanged, isElevated }) {
                   onRemoveCostumePhoto={(photoId) => run(() => planModelPhotoService.remove(photoId), 'Could not remove photo.')}
                   onRequestRemove={() => requestRemoveModel(m)}
                 />
+              ))}
+
+              <AssignmentRow
+                label="Freelancers"
+                pool={freelancerPool}
+                selectedIds={p.assigned_freelancers || []}
+                onRemove={requestRemoveFreelancer}
+                actionLabel="+ Select freelancer"
+                onAction={() => setFreelancerPickerFor(p.id)}
+              />
+              {assignedFreelancers.map((f) => (
+                <div key={f.id} className="rr-wizgrid-2" style={{ marginBottom: 14, maxWidth: 320 }}>
+                  <div className="rr-wizfield" style={{ marginBottom: 0 }}>
+                    <label>Agreed time in — {f.name}</label>
+                    <input type="time" defaultValue={f.call_time || ''} onBlur={(e) => patchFreelancer(f.id, { call_time: e.target.value || null })} />
+                  </div>
+                  <div className="rr-wizfield" style={{ marginBottom: 0 }}>
+                    <label>Agreed time out — {f.name}</label>
+                    <input type="time" defaultValue={f.time_out || ''} onBlur={(e) => patchFreelancer(f.id, { time_out: e.target.value || null })} />
+                  </div>
+                </div>
               ))}
 
               <div className="rr-wizfield">
@@ -770,6 +836,57 @@ export default function StepPhotos({ plan, onChanged, isElevated }) {
               ))}
             {directoryModels.length === 0 && (
               <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'rgba(0,0,0,.45)' }}>No models in the directory yet.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {freelancerPickerFor !== null && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}
+          onClick={closeFreelancerPicker}
+        >
+          <div
+            style={{ background: '#fff', width: 460, maxWidth: '92vw', maxHeight: '80vh', overflowY: 'auto', borderRadius: 8, padding: 20 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>Select from Freelancers directory</div>
+              <button type="button" onClick={closeFreelancerPicker} style={{ border: 'none', background: 'none', fontSize: 16, cursor: 'pointer' }}>
+                ✕
+              </button>
+            </div>
+            <input
+              autoFocus
+              value={freelancerQuery}
+              onChange={(e) => setFreelancerQuery(e.target.value)}
+              placeholder="Search freelancers…"
+              style={{ width: '100%', border: '1px solid rgba(0,0,0,.15)', borderRadius: 6, padding: '9px 12px', fontSize: 13, marginBottom: 12, boxSizing: 'border-box' }}
+            />
+            {directoryFreelancers
+              .filter((f) => f.name.toLowerCase().includes(freelancerQuery.toLowerCase()))
+              .map((f) => (
+                <div
+                  key={f.id}
+                  onClick={() => {
+                    const brief = briefs.find((b) => b.id === freelancerPickerFor);
+                    if (brief) selectFreelancer(brief, f);
+                  }}
+                  style={{ border: '1px solid rgba(0,0,0,.1)', borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+                >
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#0e0e0e', color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                    {initials(f.name)}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 700 }}>{f.name}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(0,0,0,.5)' }}>
+                      {f.specialization || (f.categories || []).join(', ')}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            {directoryFreelancers.length === 0 && (
+              <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'rgba(0,0,0,.45)' }}>No freelancers in the directory yet.</div>
             )}
           </div>
         </div>
